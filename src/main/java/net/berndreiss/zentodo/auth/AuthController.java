@@ -1,16 +1,23 @@
-package net.berndreiss.zentodo.server.auth;
+package net.berndreiss.zentodo.auth;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.server.user.UserService;
+import net.berndreiss.zentodo.data.ServerUser;
+import net.berndreiss.zentodo.data.UserRepository;
+import net.berndreiss.zentodo.data.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * TODO DECRIBE
@@ -22,7 +29,10 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
-    private static final String SECRET_KEY = "your_secret_key";
+    private final UserRepository userRepository;
+
+    @Autowired
+    private TokenManager tokenManager;
 
     /**
      * TODO DESCRIBE
@@ -38,26 +48,25 @@ public class AuthController {
 
     /**
      * TODO DESCRIBE
-     * @param email
-     * @param password
+     * @param request
      * @return
      */
     @PostMapping("/login")
-    public Map<String, String> login(@RequestParam String email, @RequestParam String password){
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
-
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-        // Generate JWT Token
-        String token = "";
-
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Login successful!");
-        response.put("token", token);
-
-        return response;
+    public ResponseEntity<String> createToken(@RequestBody JwtRequestModel
+                                                                request) throws Exception {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        } catch (DisabledException e) {
+            throw new Exception("USER_DISABLED", e);
+        } catch (BadCredentialsException e) {
+            throw new Exception("INVALID_CREDENTIALS", e);
+        }
+        Optional<ServerUser> user = userRepository.findByEmail(request.getEmail());
+        if (user.isEmpty())
+            return ResponseEntity.notFound().build();
+        final String jwtToken = tokenManager.generateJwtToken(user.get());
+        return ResponseEntity.ok(jwtToken);
     }
 
 

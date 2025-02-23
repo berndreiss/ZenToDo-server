@@ -1,2 +1,8 @@
 /home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/Controller.java
 /home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/ZenToDoServerApplication.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/auth/AuthController.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/auth/EmailService.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/auth/SecurityConfig.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/user/User.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/user/UserRepository.java
+/home/bernd/repos/ZenToDo/ZenToDo-server/src/main/java/net/berndreiss/zentodo/server/user/UserService.java

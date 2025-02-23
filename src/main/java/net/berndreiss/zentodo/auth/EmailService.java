@@ -1,4 +1,4 @@
-package net.berndreiss.zentodo.server.auth;
+package net.berndreiss.zentodo.auth;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
