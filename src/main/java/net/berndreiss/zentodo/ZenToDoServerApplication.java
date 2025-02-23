@@ -1,12 +1,14 @@
-package net.berndreiss.zentodo.server;
+package net.berndreiss.zentodo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 /**
  * TODO DESCRIBE
  */
-@SpringBootApplication
+@SpringBootApplication (scanBasePackages = "net.berndreiss.zentodo")
+@EntityScan(basePackages = {"net.berndreiss.zentodo.data"}) // Adjust the package accordingly
 public class ZenToDoServerApplication {
 
 	public static void main(String[] args) {

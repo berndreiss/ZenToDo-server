@@ -1,7 +1,7 @@
-package net.berndreiss.zentodo.server.user;
+package net.berndreiss.zentodo.data;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.server.auth.EmailService;
+import net.berndreiss.zentodo.auth.EmailService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +29,7 @@ public class UserService {
         if (userRepository.findByEmail(email).isPresent())
             return;
 
-        User user = new User();
+        ServerUser user = new ServerUser();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
 
@@ -47,7 +47,7 @@ public class UserService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            User user1 = userRepository.findByEmail(email).orElse(null);
+            ServerUser user1 = userRepository.findByEmail(email).orElse(null);
             if (user1 == null || user1.isEnabled())
                 return;
             user1.setToken(null);
@@ -70,7 +70,7 @@ public class UserService {
      * @return
      */
     public boolean verifyEmail(String email, String token) {
-        User user = userRepository.findByToken(token).orElse(null);
+        ServerUser user = userRepository.findByToken(token).orElse(null);
         if (user == null || user.getExpirationDate().isBefore(LocalDateTime.now())) {
             return false;
         }
