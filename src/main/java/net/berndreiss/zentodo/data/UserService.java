@@ -1,11 +1,16 @@
 package net.berndreiss.zentodo.data;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.auth.EmailService;
+import net.berndreiss.zentodo.auth.TokenManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -18,26 +23,33 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final TokenManager tokenManager;
+
+    public String exists(String email){
+        ServerUser user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null)
+            return null;
+        if (user.isEnabled())
+            return "enabled";
+        return "exists";
+    }
 
     /**
      * TODO DESCRIBE
      * @param email
      * @param password
      */
-    public void registerUser(String email, String password) {
+    public long registerUser(String email, String password) throws Exception {
 
         if (userRepository.findByEmail(email).isPresent())
-            return;
+            throw new Exception("User already exists");
 
         ServerUser user = new ServerUser();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
 
 
-        // Generate token for email verification
-        String token = UUID.randomUUID().toString();
-        user.setToken(token);
-        user.setExpirationDate(LocalDateTime.now().plusMinutes(10));
 
         // Remove token after 10 minutes
         Thread thread = new Thread(() -> {
@@ -50,17 +62,18 @@ public class UserService {
             ServerUser user1 = userRepository.findByEmail(email).orElse(null);
             if (user1 == null || user1.isEnabled())
                 return;
-            user1.setToken(null);
-            user1.setExpirationDate(null);
-            userRepository.save(user1);
+            userRepository.delete(user1);
         });
 
         thread.start();
 
         userRepository.save(user);
 
+        String token = tokenManager.generateJwtToken(user);
         // Send verification email
         emailService.sendVerificationEmail(email, token);
+
+        return user.getId();
     }
 
     /**
@@ -70,13 +83,17 @@ public class UserService {
      * @return
      */
     public boolean verifyEmail(String email, String token) {
-        ServerUser user = userRepository.findByToken(token).orElse(null);
-        if (user == null || user.getExpirationDate().isBefore(LocalDateTime.now())) {
+        ServerUser user = userRepository.findByEmail(email).orElse(null);
+
+        Claims claims = Jwts
+                .parserBuilder()
+                .setSigningKey(tokenManager.getKey())
+                .build()
+                .parseClaimsJws(token).getBody();
+        if (user == null || claims.getExpiration().before(new Date()) || !claims.getSubject().equals(email)) {
             return false;
         }
         user.setEnabled(true);
-        user.setToken(null);
-        user.setExpirationDate(null);
         userRepository.save(user);
         return true;
     }

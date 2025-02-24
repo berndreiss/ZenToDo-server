@@ -27,17 +27,11 @@ public class ServerUser implements UserDetails {
     @Column
     private String userName = null;
 
-    @Column
-    private String token;
-
     @Column(nullable = false)
     private String password;
 
     @Column
     private boolean enabled = false;
-
-    @Column
-    private LocalDateTime expirationDate;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

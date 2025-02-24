@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.data.Entry;
 import net.berndreiss.zentodo.data.EntryRepository;
 import net.berndreiss.zentodo.util.ZenMessage;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -21,6 +22,10 @@ public class Controller {
 
     List<String> users = new ArrayList<>();
 
+    @GetMapping ("test")
+    public ResponseEntity<String> test(){
+        return ResponseEntity.ok("okay");
+    }
     /**
      * TODO DESCRIBE
      * @param message

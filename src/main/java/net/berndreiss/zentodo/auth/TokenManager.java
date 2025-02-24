@@ -75,7 +75,7 @@ public class TokenManager {
     }
 
     // create a signing key based on secret
-    private Key getKey() {
+    public Key getKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }

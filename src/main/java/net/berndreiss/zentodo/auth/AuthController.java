@@ -36,14 +36,20 @@ public class AuthController {
 
     /**
      * TODO DESCRIBE
-     * @param email
-     * @param password
+     * @param requestModel
      * @return
      */
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestParam String email, @RequestParam String password) {
-        userService.registerUser(email, password);
-        return ResponseEntity.ok("Registration successful! Please check your email to verify.");
+    public ResponseEntity<String> register(@RequestBody JwtRequestModel requestModel) throws Exception {
+
+        String status = userService.exists(requestModel.getEmail());
+
+        if (status != null)
+            return ResponseEntity.ok(status);
+
+        long id = userService.registerUser(requestModel.getEmail(), requestModel.getPassword());
+
+        return ResponseEntity.ok(String.valueOf(id));
     }
 
     /**
@@ -52,7 +58,7 @@ public class AuthController {
      * @return
      */
     @PostMapping("/login")
-    public ResponseEntity<String> createToken(@RequestBody JwtRequestModel
+    public ResponseEntity<String> login(@RequestBody JwtRequestModel
                                                                 request) throws Exception {
         try {
             authenticationManager.authenticate(
