@@ -1,5 +1,8 @@
 package net.berndreiss.zentodo.auth;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.data.ServerUser;
 import net.berndreiss.zentodo.data.UserRepository;
@@ -15,6 +18,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -75,6 +80,36 @@ public class AuthController {
         return ResponseEntity.ok(jwtToken);
     }
 
+
+    /**
+     * TODO DESCRIBE
+     * @param requestModel
+     * @return
+     */
+    @PostMapping ("/renewToken")
+    public ResponseEntity<String> renewToken(@RequestBody JwtRequestModel requestModel, HttpServletResponse response){
+        String oldToken = requestModel.getPassword();
+
+        Claims claims = Jwts
+                .parserBuilder()
+                .setSigningKey(tokenManager.getKey())
+                .build()
+                .parseClaimsJws(oldToken)
+                .getBody();
+
+        boolean expired = claims.getExpiration().before(new Date());
+
+        if (expired || !claims.getSubject().equals(requestModel.getEmail()))
+            return ResponseEntity.status(401).build();
+
+        ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+
+        if (user == null)
+            return ResponseEntity.status(401).build();
+
+
+        return ResponseEntity.ok(tokenManager.generateJwtToken(user));
+    }
 
     /**
      * TODO DESCRIBE

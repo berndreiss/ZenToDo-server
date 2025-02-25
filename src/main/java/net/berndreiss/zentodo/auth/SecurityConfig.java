@@ -61,7 +61,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())  // Disable CSRF for simplicity
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/verify").permitAll()  // Allow unauthenticated access
+                        .requestMatchers("/auth/**").permitAll()  // Allow unauthenticated access
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception->exception.authenticationEntryPoint(authenticationEntryPoint))

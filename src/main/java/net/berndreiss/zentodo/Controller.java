@@ -59,7 +59,7 @@ public class Controller {
     public void add(@RequestBody ZenMessage message){
 
         List<Object> arguments = message.getArguments();
-        Entry entry = new Entry(Long.parseLong((String) arguments.get(0)), Integer.parseInt((String) arguments.get(1)), (String) arguments.get(2));
+        Entry entry = new Entry(Long.parseLong((String) arguments.get(0)), Integer.parseInt((String) arguments.get(1)), (String) arguments.get(2), Long.parseLong((String) arguments.get(3)));
 
         entryRepository.save(entry);
         for (Object s: message.getArguments())
