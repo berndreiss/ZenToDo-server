@@ -75,7 +75,7 @@ public class Controller {
      * @return
      */
     @PostMapping("/add")
-    public void add(@RequestBody List<ZenServerMessage> list){
+    public ResponseEntity<String> add(@RequestBody List<ZenServerMessage> list){
 
         System.out.println("ADD CALLED");
         for (ZenServerMessage message : list) {
@@ -91,5 +91,6 @@ public class Controller {
 
         System.out.println(eventPublisherController.publish(ClientStub.jsonifyServerList(list)));
 
+        return ResponseEntity.ok("");
     }
 }
