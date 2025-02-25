@@ -1,6 +1,5 @@
 package net.berndreiss.zentodo.util;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -9,10 +8,10 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
+/**
+ * TODO
+ */
 @ControllerAdvice
 public class TimeResponseBodyAdvice implements ResponseBodyAdvice<Object> {
     @Override

@@ -6,11 +6,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.awt.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
+/**
+ * TODO
+ */
 @Component
 public class RequestTimingInterceptor implements HandlerInterceptor {
 
@@ -19,21 +19,9 @@ public class RequestTimingInterceptor implements HandlerInterceptor {
         // Store request received time
         response.setHeader("t2", TimeDrift.getTimeStamp());
         response.setHeader("t1", request.getHeader("t1"));
-        System.out.println("PRE");
         return true;
     }
 
-    @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
-        // Retrieve request received time
-        String requestReceivedAt = (String) request.getAttribute("requestReceivedAt");
-        String responseSentAt = Instant.now().toString();
-
-        System.out.println("POST");
-        // Add timestamps to response headers
-        response.setHeader("X-Request-Received-At", requestReceivedAt);
-        response.setHeader("X-Response-Sent-At", responseSentAt);
-        response.setHeader("Test", "AAAAAAAAAAAAA");
-    }
-
+    // The timestamp for sending the reply is implemented in the TimeResponseBodyAdvice, since responses are already
+    // commited in postHandle and headers therefore can not be modified.
 }
