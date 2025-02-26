@@ -1,8 +1,8 @@
 package net.berndreiss.zentodo;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.data.Entry;
-import net.berndreiss.zentodo.data.EntryRepository;
+import net.berndreiss.zentodo.auth.JwtRequestModel;
+import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.util.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +19,7 @@ import java.util.List;
 public class Controller {
 
     private final EntryRepository entryRepository;
+    private final DeviceRepository deviceRepository;
     private final EventPublisherController eventPublisherController;
 
     List<String> users = new ArrayList<>();
@@ -43,7 +44,7 @@ public class Controller {
      * @param messageList
      * @return
      */
-    @PostMapping("/process")
+    @PostMapping("process")
     public ResponseEntity<String> process(@RequestBody List<ZenServerMessage> messageList){
 
         for (ZenServerMessage message: messageList) {
@@ -74,8 +75,8 @@ public class Controller {
      * @param list
      * @return
      */
-    @PostMapping("/add")
-    public ResponseEntity<String> add(@RequestBody List<ZenServerMessage> list){
+    @PostMapping("add")
+    public ResponseEntity<String> add(@RequestBody List<ZenServerMessage> list, @RequestHeader("email") String email, @RequestHeader("device") String device){
 
         System.out.println("ADD CALLED");
         for (ZenServerMessage message : list) {
@@ -88,9 +89,24 @@ public class Controller {
             System.out.println(message.getTimeStamp());
         }
 
+        List<Long> devices = new ArrayList<>();
 
-        System.out.println(eventPublisherController.publish(ClientStub.jsonifyServerList(list)));
+        devices.add(Long.parseLong(device));
+
+        devices = deviceRepository.findAll().stream()
+                .filter(d -> d.getEmail().equals(email) && d.getId() != Long.parseLong(device))
+                .map(Device::getId)
+                .toList();
+
+        Long id = 0L;
+
+        List<Long> notSent = eventPublisherController.publish(id, ClientStub.jsonifyServerList(list), email, devices);
+
+        System.out.println("MSSING DEVICES:");
+        notSent.forEach(System.out::println);
 
         return ResponseEntity.ok("");
     }
+
+
 }

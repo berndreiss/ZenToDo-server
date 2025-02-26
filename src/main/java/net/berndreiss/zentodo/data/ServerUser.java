@@ -33,6 +33,9 @@ public class ServerUser implements UserDetails {
     @Column
     private boolean enabled = false;
 
+    @Column (nullable = false)
+    private long device;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
@@ -42,4 +45,5 @@ public class ServerUser implements UserDetails {
     public String getUsername() {
         return email;
     }
+
 }

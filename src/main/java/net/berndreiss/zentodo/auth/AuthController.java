@@ -4,9 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.data.ServerUser;
-import net.berndreiss.zentodo.data.UserRepository;
-import net.berndreiss.zentodo.data.UserService;
+import net.berndreiss.zentodo.data.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,10 +17,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 /**
  * TODO DECRIBE
@@ -35,6 +31,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final DeviceRepository deviceRepository;
 
     @Autowired
     private TokenManager tokenManager;
@@ -49,12 +46,37 @@ public class AuthController {
 
         String status = userService.exists(requestModel.getEmail());
 
-        if (status != null)
-            return ResponseEntity.ok(status);
+        if (status != null){
+            if (!status.equals("enabled"))
+                return ResponseEntity.ok(status);
 
-        long id = userService.registerUser(requestModel.getEmail(), requestModel.getPassword());
+            List<Device> deviceList = deviceRepository.findAll().stream()
+                    .filter(device -> device.getEmail().equals(requestModel.getEmail()))
+                    .sorted(Comparator.comparingInt(d -> (int) d.getId()))
+                    .toList();
 
-        return ResponseEntity.ok(String.valueOf(id));
+            long deviceId = 0;
+            if (!deviceList.isEmpty())
+                deviceId = deviceList.getLast().getId() + 1;
+
+            userService.addNewDevice(deviceId, requestModel.getEmail());
+
+            ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+            if (user == null)
+                throw new Exception("User does not exist after check.");
+
+            user.setDevice(deviceId);
+
+            userRepository.save(user);
+
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
+            final String jwtToken = tokenManager.generateJwtToken(user);
+            return ResponseEntity.ok("1," + user.getId() + "," + deviceId + "," + jwtToken);
+        }
+
+        String response = userService.registerUser(requestModel.getEmail(), requestModel.getPassword());
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -122,5 +144,30 @@ public class AuthController {
         boolean verified = userService.verifyEmail(email, token);
         return verified ? ResponseEntity.ok("Email verified successfully!") :
                 ResponseEntity.badRequest().body("Invalid or expired verification token.");
+    }
+
+    /**
+     * TODO
+     * @param requestModel
+     * @return
+     */
+    @PostMapping("status")
+    public ResponseEntity<String> status(@RequestBody JwtRequestModel requestModel) throws Exception {
+
+        String status = userService.exists(requestModel.getEmail());
+
+        if (status == null)
+            return ResponseEntity.ok("non");
+
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
+
+        if (status.equals("enabled")){
+            ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+            if (user == null)
+                throw new Exception("User not retrieved.");
+            return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(user));
+        }
+        return ResponseEntity.ok(status);
+
     }
 }

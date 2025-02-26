@@ -6,11 +6,17 @@ import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.auth.EmailService;
 import net.berndreiss.zentodo.auth.TokenManager;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,9 +27,11 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final DeviceRepository deviceRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final TokenManager tokenManager;
+    private final AuthenticationManager authenticationManager;
 
     public String exists(String email){
         ServerUser user = userRepository.findByEmail(email).orElse(null);
@@ -39,17 +47,35 @@ public class UserService {
      * TODO DESCRIBE
      * @param email
      * @param password
+     * @return
      */
-    public long registerUser(String email, String password) throws Exception {
+    public String registerUser(String email, String password) throws Exception {
 
-        if (userRepository.findByEmail(email).isPresent())
-            throw new Exception("User already exists");
+        ServerUser user = userRepository.findByEmail(email).orElse(null);
 
-        ServerUser user = new ServerUser();
+        List<Device> deviceList = deviceRepository.findAll().stream()
+                .filter(device -> device.getEmail().equals(email))
+                .sorted(Comparator.comparingInt(d -> (int) d.getId()))
+                .toList();
+
+        long deviceId = 0;
+        if (!deviceList.isEmpty())
+            deviceId = deviceList.getFirst().getId() + 1;
+
+        if (user != null){
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+            final String jwtToken = tokenManager.generateJwtToken(user);
+            return "1," + user.getId() + "," + deviceId + "," + jwtToken;
+        }
+
+
+
+        user = new ServerUser();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
+        user.setDevice(deviceId);
 
-
+        addNewDevice(deviceId, email);
 
         // Remove token after 10 minutes
         Thread thread = new Thread(() -> {
@@ -73,7 +99,20 @@ public class UserService {
         // Send verification email
         emailService.sendVerificationEmail(email, token);
 
-        return user.getId();
+        return "0," + user.getId() + "," + deviceId;
+    }
+
+    /**
+     * TODO
+     * @param id
+     * @param email
+     */
+    public void addNewDevice(long id, String email){
+        Device device = new Device();
+        device.setId(id);
+        device.setEmail(email);
+        device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
+        deviceRepository.save(device);
     }
 
     /**
