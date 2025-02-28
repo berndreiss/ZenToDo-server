@@ -13,7 +13,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
     public static final Map<String, Map<Long, WebSocketSession>> sessions = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, String> messageAcknowledgments = Collections.synchronizedMap(new HashMap<>());
 
-
+    private static Integer id = 0;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -49,7 +49,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
         System.out.println("Client disconnected: " + session.getId());
     }
 
-    public List<Long> publishEvent(Long id, String message, String email, List<Long> devices) {
+    public List<Long> publishEvent(String message, String email, List<Long> devices) {
         synchronized (sessions) {
             List<Long> notSent = new ArrayList<>(devices);
             Map<Long, WebSocketSession> socketSessions = sessions.get(email);
@@ -59,10 +59,13 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
             sessions.get(email).forEach( (key, value) ->{
                 if (devices.contains(key)){
                     try {
+                        int id;
+                        synchronized (PubSubWebSocketHandler.class) {
+                            id = PubSubWebSocketHandler.id++;
+                        }
                         value.sendMessage(new TextMessage("{\"message\": " + message + ", \"id\": \"" + id + "\"}"));
                         messageAcknowledgments.put(id + "-" + email +  "-" + key, message);
                         notSent.remove(key);
-                        System.out.println("SIZE OF MISSING ACKNS: " + messageAcknowledgments.size());
                     } catch (Exception e) {
                         //TODO LOG
                     }
@@ -73,6 +76,5 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
     }
     public void handleAcknowledgment(Acknowledgement acknowledgement){
         messageAcknowledgments.remove(acknowledgement.getId() + "-" + acknowledgement.getEmail() + "-" + acknowledgement.getDevice());
-        System.out.println("SIZE OF MISSING ACKNS: " + messageAcknowledgments.size());
     }
 }

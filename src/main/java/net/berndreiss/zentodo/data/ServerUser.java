@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,6 +30,9 @@ public class ServerUser implements UserDetails {
 
     @Column(nullable = false)
     private String password;
+
+    @OneToMany (mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Device> devices = new ArrayList<>();
 
     @Column
     private boolean enabled = false;

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.data.ServerUser;
+import net.berndreiss.zentodo.data.User;
 import net.berndreiss.zentodo.data.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,6 +37,8 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String tokenHeader = request.getHeader("Authorization");
+
+        System.out.println(tokenHeader);
         String email = null;
         String token = null;
         // if bearer token is provided, get the username
@@ -65,6 +68,21 @@ public class JwtFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }
         }
+
+
+        String device = request.getHeader("device");
+
+        System.out.println("DEVICE: " + device);
+
+        if (device != null){
+            ServerUser user = userRepository.findByEmail(email).orElse(null);
+            if (user != null){
+                user.setDevice(Long.parseLong(device));
+                System.out.println(user.getDevice());
+                userRepository.save(user);
+            }
+        }
+
         filterChain.doFilter(request, response);
     }
 }

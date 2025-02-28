@@ -53,13 +53,17 @@ public class UserService {
 
         ServerUser user = userRepository.findByEmail(email).orElse(null);
 
-        List<Device> deviceList = deviceRepository.findAll().stream()
-                .filter(device -> device.getEmail().equals(email))
-                .sorted(Comparator.comparingInt(d -> (int) d.getId()))
-                .toList();
 
+        List<Device> deviceList = null;
+        if (user != null) {
+            final long userId = user.getId();
+            deviceList = deviceRepository.findAll().stream()
+                    .filter(device -> device.getUser().getId() == userId)
+                    .sorted(Comparator.comparingInt(d -> (int) d.getId()))
+                    .toList();
+        }
         long deviceId = 0;
-        if (!deviceList.isEmpty())
+        if (deviceList != null && !deviceList.isEmpty())
             deviceId = deviceList.getFirst().getId() + 1;
 
         if (user != null){
@@ -74,8 +78,9 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setDevice(deviceId);
+        userRepository.save(user);
 
-        addNewDevice(deviceId, email);
+        addNewDevice(deviceId, user);
 
         // Remove token after 10 minutes
         Thread thread = new Thread(() -> {
@@ -93,7 +98,6 @@ public class UserService {
 
         thread.start();
 
-        userRepository.save(user);
 
         String token = tokenManager.generateJwtToken(user);
         // Send verification email
@@ -105,12 +109,12 @@ public class UserService {
     /**
      * TODO
      * @param id
-     * @param email
+     * @param user
      */
-    public void addNewDevice(long id, String email){
+    public void addNewDevice(long id, ServerUser user){
         Device device = new Device();
         device.setId(id);
-        device.setEmail(email);
+        device.setUser(user);
         device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
         deviceRepository.save(device);
     }

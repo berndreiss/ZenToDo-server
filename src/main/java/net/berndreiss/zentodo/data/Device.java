@@ -3,7 +3,6 @@ package net.berndreiss.zentodo.data;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -18,12 +17,9 @@ public class Device {
     private long id;
 
     @Column
-    private String email;
-
-    @Column
     private Instant expiration;
 
-
-
-
+    @ManyToOne
+    @JoinColumn(name = "user_id",nullable = false)
+    private ServerUser user;
 }

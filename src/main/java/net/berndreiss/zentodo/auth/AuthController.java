@@ -44,14 +44,14 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody JwtRequestModel requestModel) throws Exception {
 
-        String status = userService.exists(requestModel.getEmail());
 
-        if (status != null){
-            if (!status.equals("enabled"))
-                return ResponseEntity.ok(status);
+        ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+        if (user != null){
+            if (!user.isEnabled())
+                return ResponseEntity.ok("exists");
 
             List<Device> deviceList = deviceRepository.findAll().stream()
-                    .filter(device -> device.getEmail().equals(requestModel.getEmail()))
+                    .filter(device -> Objects.equals(device.getUser().getId(), user.getId()))
                     .sorted(Comparator.comparingInt(d -> (int) d.getId()))
                     .toList();
 
@@ -59,15 +59,11 @@ public class AuthController {
             if (!deviceList.isEmpty())
                 deviceId = deviceList.getLast().getId() + 1;
 
-            userService.addNewDevice(deviceId, requestModel.getEmail());
-
-            ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
-            if (user == null)
-                throw new Exception("User does not exist after check.");
 
             user.setDevice(deviceId);
 
             userRepository.save(user);
+            userService.addNewDevice(deviceId, user);
 
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
             final String jwtToken = tokenManager.generateJwtToken(user);
@@ -85,8 +81,7 @@ public class AuthController {
      * @return
      */
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody JwtRequestModel
-                                                                request) throws Exception {
+    public ResponseEntity<String> login(@RequestBody JwtRequestModel request) throws Exception {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -151,7 +146,7 @@ public class AuthController {
      * @param requestModel
      * @return
      */
-    @PostMapping("status")
+    @PostMapping("/status")
     public ResponseEntity<String> status(@RequestBody JwtRequestModel requestModel) throws Exception {
 
         String status = userService.exists(requestModel.getEmail());
@@ -159,7 +154,19 @@ public class AuthController {
         if (status == null)
             return ResponseEntity.ok("non");
 
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
+        if (!status.equals("enabled"))
+            return ResponseEntity.ok(status);
+
+
+        System.out.println("STATUS");
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
+        } catch (DisabledException e) {
+            throw new Exception("USER_DISABLED", e);
+        } catch (BadCredentialsException e) {
+            throw new Exception("INVALID_CREDENTIALS", e);
+        }
 
         if (status.equals("enabled")){
             ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);

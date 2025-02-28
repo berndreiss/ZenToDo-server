@@ -1,6 +1,5 @@
 package net.berndreiss.zentodo.util;
 
-import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +15,10 @@ public class EventPublisherController {
     }
 
     @GetMapping("/publish")
-    public List<Long> publish(@RequestParam Long id, String message, String email, List<Long> devices) {
-        return webSocketHandler.publishEvent(id, message, email, devices);
+    public List<Long> publish(@RequestParam String message, String email, List<Long> devices) {
+        return webSocketHandler.publishEvent( message, email, devices);
     }
+
     @PostMapping("ackn")
     public ResponseEntity<String> ackn(@RequestBody Acknowledgement acknowledgement){
         webSocketHandler.handleAcknowledgment(acknowledgement);
