@@ -1,23 +1,20 @@
 package net.berndreiss.zentodo.data;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
+import net.berndreiss.zentodo.Controller;
 import net.berndreiss.zentodo.auth.EmailService;
 import net.berndreiss.zentodo.auth.TokenManager;
+import net.berndreiss.zentodo.util.VectorClock;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * TODO DESCRIBE
@@ -26,15 +23,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final DeviceRepository deviceRepository;
+    public final UserRepository repository;
+    public final DeviceRepository deviceRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final TokenManager tokenManager;
     private final AuthenticationManager authenticationManager;
 
     public String exists(String email){
-        ServerUser user = userRepository.findByEmail(email).orElse(null);
+        User user = repository.findByEmail(email).orElse(null);
 
         if (user == null)
             return null;
@@ -51,11 +48,12 @@ public class UserService {
      */
     public String registerUser(String email, String password) throws Exception {
 
-        ServerUser user = userRepository.findByEmail(email).orElse(null);
+        User user = repository.findByEmail(email).orElse(null);
 
 
         List<Device> deviceList = null;
         if (user != null) {
+            addNewDevice(user);
             final long userId = user.getId();
             deviceList = deviceRepository.findAll().stream()
                     .filter(device -> device.getUser().getId() == userId)
@@ -68,19 +66,31 @@ public class UserService {
 
         if (user != null){
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
-            final String jwtToken = tokenManager.generateJwtToken(user);
+            final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user));
             return "1," + user.getId() + "," + deviceId + "," + jwtToken;
         }
 
 
 
-        user = new ServerUser();
+        Random random = new Random();
+        long userId = random.nextLong();
+        System.out.println("RANDOM: " + userId);
+        while(repository.findById(userId).isPresent())
+            userId++;
+
+        VectorClock clock = new VectorClock();
+        clock.entries.put(deviceId, 0L);
+
+        user = new User();
+        user.setId(userId);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setDevice(deviceId);
-        userRepository.save(user);
+        user.setClock(clock.jsonify());
+        repository.save(user);
 
-        addNewDevice(deviceId, user);
+        addNewDevice(user);
+
 
         // Remove token after 10 minutes
         Thread thread = new Thread(() -> {
@@ -90,16 +100,16 @@ public class UserService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            ServerUser user1 = userRepository.findByEmail(email).orElse(null);
+            User user1 = repository.findByEmail(email).orElse(null);
             if (user1 == null || user1.isEnabled())
                 return;
-            userRepository.delete(user1);
+            repository.delete(user1);
         });
 
         thread.start();
 
 
-        String token = tokenManager.generateJwtToken(user);
+        String token = tokenManager.generateJwtToken(new UserWrapper(user));
         // Send verification email
         emailService.sendVerificationEmail(email, token);
 
@@ -108,12 +118,26 @@ public class UserService {
 
     /**
      * TODO
-     * @param id
      * @param user
      */
-    public void addNewDevice(long id, ServerUser user){
+    public void addNewDevice(User user){
+        List<Device> deviceList = deviceRepository.findAll().stream()
+                .filter(device -> Objects.equals(device.getUser().getId(), user.getId()))
+                .sorted(Comparator.comparingInt(d -> (int) d.getId()))
+                .toList();
+
+        long deviceId = 0;
+        if (!deviceList.isEmpty())
+            deviceId = deviceList.getLast().getId() + 1;
+
+        user.setDevice(deviceId);
+
+        VectorClock clock = new VectorClock(user.getClock());
+        clock.addDevice(deviceId);
+        user.setClock(clock.jsonify());
+        repository.save(user);
         Device device = new Device();
-        device.setId(id);
+        device.setId(deviceId);
         device.setUser(user);
         device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
         deviceRepository.save(device);
@@ -126,7 +150,7 @@ public class UserService {
      * @return
      */
     public boolean verifyEmail(String email, String token) {
-        ServerUser user = userRepository.findByEmail(email).orElse(null);
+        User user = repository.findByEmail(email).orElse(null);
 
         Claims claims = Jwts
                 .parserBuilder()
@@ -137,7 +161,26 @@ public class UserService {
             return false;
         }
         user.setEnabled(true);
-        userRepository.save(user);
+        repository.save(user);
         return true;
+    }
+
+    public User getByMail(String email){
+
+        return repository.findByEmail(email).orElse(null);
+    }
+
+    public List<Long> getOtherDevices(User user, Long device){
+        return deviceRepository.findAll().stream()
+                .filter(d -> Objects.equals(d.getUser().getId(), user.getId()) && d.getId() != device)
+                .map(Device::getId)
+                .toList();
+
+    }
+    public List<Long> getDevices(User user){
+        return deviceRepository.findAll().stream()
+                .map(Device::getId)
+                .toList();
+
     }
 }

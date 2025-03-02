@@ -1,7 +1,7 @@
 package net.berndreiss.zentodo.auth;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.data.ServerUser;
+import net.berndreiss.zentodo.data.User;
 import net.berndreiss.zentodo.data.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +33,7 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
-                .filter(ServerUser::isEnabled) // Ensure email is verified
+                .filter(User::isEnabled) // Ensure email is verified
                 .map(user -> org.springframework.security.core.userdetails.User
                         .withUsername(user.getEmail())
                         .password(user.getPassword())

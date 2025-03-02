@@ -8,9 +8,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.data.ServerUser;
 import net.berndreiss.zentodo.data.User;
 import net.berndreiss.zentodo.data.UserRepository;
+import net.berndreiss.zentodo.data.UserWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +38,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String tokenHeader = request.getHeader("Authorization");
 
+        User user = null;
         System.out.println(tokenHeader);
         String email = null;
         String token = null;
@@ -46,6 +47,11 @@ public class JwtFilter extends OncePerRequestFilter {
             token = tokenHeader.substring(7);
             try {
                 email = tokenManager.getUsernameFromToken(token);
+                user = userRepository.findByEmail(email).orElse(null);
+                if (user == null || !user.isEnabled()) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User account is disabled");
+                    return;
+                }
             } catch (IllegalArgumentException e) {
                 System.out.println("Unable to get JWT Token");
             } catch (ExpiredJwtException e) {
@@ -56,13 +62,15 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         // validate the JWT Token and create a new authentication token and set in security context
         if (null != email && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Optional<ServerUser> userDetails = userRepository.findByEmail(email);
-            if (userDetails.isEmpty())
+            if (user == null)
                 throw new UsernameNotFoundException("User with mail " + email + " could not be found.");
-            if (tokenManager.validateJwtToken(token, userDetails.get())) {
+
+            UserWrapper userDetails = new UserWrapper(user);
+
+            if (tokenManager.validateJwtToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken
                         authenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.get().getAuthorities());
+                        userDetails, null, userDetails.getAuthorities());
                 authenticationToken.setDetails(new
                         WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
@@ -75,7 +83,6 @@ public class JwtFilter extends OncePerRequestFilter {
         System.out.println("DEVICE: " + device);
 
         if (device != null){
-            ServerUser user = userRepository.findByEmail(email).orElse(null);
             if (user != null){
                 user.setDevice(Long.parseLong(device));
                 System.out.println(user.getDevice());

@@ -1,5 +1,6 @@
 package net.berndreiss.zentodo.util;
 
+import net.berndreiss.zentodo.data.Acknowledgement;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -11,7 +12,6 @@ import java.util.*;
 public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
     public static final Map<String, Map<Long, WebSocketSession>> sessions = Collections.synchronizedMap(new HashMap<>());
-    private final Map<String, String> messageAcknowledgments = Collections.synchronizedMap(new HashMap<>());
 
     private static Integer id = 0;
 
@@ -49,7 +49,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
         System.out.println("Client disconnected: " + session.getId());
     }
 
-    public List<Long> publishEvent(String message, String email, List<Long> devices) {
+    public List<Long> publishEvent(String id, String message, String email, List<Long> devices) {
         synchronized (sessions) {
             List<Long> notSent = new ArrayList<>(devices);
             Map<Long, WebSocketSession> socketSessions = sessions.get(email);
@@ -59,12 +59,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
             sessions.get(email).forEach( (key, value) ->{
                 if (devices.contains(key)){
                     try {
-                        int id;
-                        synchronized (PubSubWebSocketHandler.class) {
-                            id = PubSubWebSocketHandler.id++;
-                        }
                         value.sendMessage(new TextMessage("{\"message\": " + message + ", \"id\": \"" + id + "\"}"));
-                        messageAcknowledgments.put(id + "-" + email +  "-" + key, message);
                         notSent.remove(key);
                     } catch (Exception e) {
                         //TODO LOG
@@ -74,7 +69,5 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
             return notSent;
         }
     }
-    public void handleAcknowledgment(Acknowledgement acknowledgement){
-        messageAcknowledgments.remove(acknowledgement.getId() + "-" + acknowledgement.getEmail() + "-" + acknowledgement.getDevice());
-    }
+
 }

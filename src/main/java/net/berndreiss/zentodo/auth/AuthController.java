@@ -4,7 +4,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import net.berndreiss.zentodo.Controller;
 import net.berndreiss.zentodo.data.*;
+import net.berndreiss.zentodo.util.VectorClock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,29 +47,16 @@ public class AuthController {
     public ResponseEntity<String> register(@RequestBody JwtRequestModel requestModel) throws Exception {
 
 
-        ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+        User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+        System.out.println(user == null);
         if (user != null){
+            userService.addNewDevice(user);
             if (!user.isEnabled())
-                return ResponseEntity.ok("exists");
-
-            List<Device> deviceList = deviceRepository.findAll().stream()
-                    .filter(device -> Objects.equals(device.getUser().getId(), user.getId()))
-                    .sorted(Comparator.comparingInt(d -> (int) d.getId()))
-                    .toList();
-
-            long deviceId = 0;
-            if (!deviceList.isEmpty())
-                deviceId = deviceList.getLast().getId() + 1;
-
-
-            user.setDevice(deviceId);
-
-            userRepository.save(user);
-            userService.addNewDevice(deviceId, user);
+                return ResponseEntity.ok("exists," + user.getId() + "," + user.getDevice());
 
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
-            final String jwtToken = tokenManager.generateJwtToken(user);
-            return ResponseEntity.ok("1," + user.getId() + "," + deviceId + "," + jwtToken);
+            final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user));
+            return ResponseEntity.ok("1," + user.getId() + "," + user.getDevice() + "," + jwtToken);
         }
 
         String response = userService.registerUser(requestModel.getEmail(), requestModel.getPassword());
@@ -82,6 +71,9 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody JwtRequestModel request) throws Exception {
+        Optional<User> user = userRepository.findByEmail(request.getEmail());
+        if (user.isEmpty())
+            return ResponseEntity.status(404).build();
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -90,10 +82,7 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             throw new Exception("INVALID_CREDENTIALS", e);
         }
-        Optional<ServerUser> user = userRepository.findByEmail(request.getEmail());
-        if (user.isEmpty())
-            return ResponseEntity.notFound().build();
-        final String jwtToken = tokenManager.generateJwtToken(user.get());
+        final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user.get()));
         return ResponseEntity.ok(jwtToken);
     }
 
@@ -119,13 +108,12 @@ public class AuthController {
         if (expired || !claims.getSubject().equals(requestModel.getEmail()))
             return ResponseEntity.status(401).build();
 
-        ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+        User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
 
         if (user == null)
             return ResponseEntity.status(401).build();
 
-
-        return ResponseEntity.ok(tokenManager.generateJwtToken(user));
+        return ResponseEntity.ok(tokenManager.generateJwtToken(new UserWrapper(user)));
     }
 
     /**
@@ -169,10 +157,10 @@ public class AuthController {
         }
 
         if (status.equals("enabled")){
-            ServerUser user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+            User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
             if (user == null)
                 throw new Exception("User not retrieved.");
-            return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(user));
+            return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(new UserWrapper(user)));
         }
         return ResponseEntity.ok(status);
 

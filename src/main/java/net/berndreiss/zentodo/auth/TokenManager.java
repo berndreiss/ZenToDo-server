@@ -79,4 +79,18 @@ public class TokenManager {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
+
+    public Claims getBodyFromToken(String token){
+
+        return Jwts
+                .parserBuilder()
+                .setSigningKey(getKey())
+                .build().parseClaimsJws(token.substring(7))
+                .getBody();
+
+    }
+    public String getMailFromToken(String token){
+        Claims claims = getBodyFromToken(token);
+        return claims.getSubject();
+    }
 }
