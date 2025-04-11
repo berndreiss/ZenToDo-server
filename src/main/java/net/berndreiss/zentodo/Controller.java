@@ -12,6 +12,7 @@ import org.json.JSONArray;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,17 +111,20 @@ public class Controller {
 
             acknowledgements.forEach(a -> {
                 MissingQueueUpdate missingQueueUpdate = entryService.missingQueueUpdatesRepository.findById(a.getMissingQueueUpdateId());
-                missingQueueUpdate.getDevices().remove(device);
-                System.out.println(missingQueueUpdate.getId());
-                System.out.println(missingQueueUpdate.getDevices().size());
-                if (missingQueueUpdate.getDevices().isEmpty()) {
-                    entryService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
-                    entryService.queueRepository.deleteById(missingQueueUpdate.getId());
-                } else
-                    entryService.missingQueueUpdatesRepository.save(missingQueueUpdate);
-
+                if (missingQueueUpdate != null) {
+                    missingQueueUpdate.getDevices().remove(device);
+                    System.out.println(missingQueueUpdate.getId());
+                    System.out.println(missingQueueUpdate.getDevices().size());
+                    if (missingQueueUpdate.getDevices().isEmpty()) {
+                        entryService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
+                        entryService.queueRepository.deleteById(missingQueueUpdate.getId());
+                    } else
+                        entryService.missingQueueUpdatesRepository.save(missingQueueUpdate);
+                }
             });
 
+            for (Acknowledgement a: acknowledgements)
+                entryService.acknowledgementRepository.delete(a);
 
             messageRepository.deleteById(id);
             return ResponseEntity.ok("ackn");
@@ -142,7 +146,6 @@ public class Controller {
         System.out.println("PROCESSING");
 
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
-
         List<Long> devices = userService.getOtherDevices(user, device);
 
         Message message = new Message();
@@ -154,6 +157,7 @@ public class Controller {
 
         List<QueueItem> queue = entryService.getQueue(user).stream().sorted(Comparator.comparing(QueueItem::getTimeStamp)).toList();
 
+        List<Integer> alreadyAddedPositions = new ArrayList<>();
         for (ZenServerMessage zm: messageList) {
             VectorClock clock = new VectorClock(user.getClock());
 
@@ -164,6 +168,7 @@ public class Controller {
 
             switch (zm.type) {
                 case ADD_NEW_ENTRY -> {
+                    int originalPosition = Integer.parseInt(zm.arguments.get(3).toString());
                     for (QueueItem qi: queue) {
 
                         List<Long> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
@@ -174,13 +179,21 @@ public class Controller {
                         if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
                             continue;
 
-                        if (qi.getTimeStamp().isBefore(zm.timeStamp)){
+                        if (qi.getTimeStamp().isAfter(zm.timeStamp)){
                             qi.getArguments().set(3, String.valueOf(Integer.parseInt(qi.getArguments().get(3)) + 1));
                             entryService.queueRepository.save(qi);
                         } else
                             zm.arguments.set(3, Integer.parseInt(zm.arguments.get(3).toString()) + 1);
 
                     }
+
+                    int toAdd = (int) alreadyAddedPositions.stream().filter(i -> i <= Integer.parseInt(zm.arguments.get(3).toString())).count();
+
+                    int finalPosition = Integer.parseInt(zm.arguments.get(3).toString()) + toAdd;
+                    zm.arguments.set(3, finalPosition);
+                    if (originalPosition != finalPosition)
+                        alreadyAddedPositions.add(finalPosition);
+
                     List<Object> args = zm.arguments;
 
                     long id = Long.parseLong(args.getFirst().toString());
@@ -244,37 +257,4 @@ public class Controller {
 
         return ResponseEntity.ok("");
     }
-
-
-    /**
-     * TODO DESCRIBE
-     * @param list
-     * @return
-     */
-    @PostMapping("add")
-    public ResponseEntity<String> add(@RequestBody List<ZenServerMessage> list, @RequestHeader("device") String device, @RequestHeader("Authorization") String auth){
-
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(tokenManager.getKey())
-                .build()
-                .parseClaimsJws(auth)
-                .getBody();
-
-        String email = claims.getSubject();
-
-        for (ZenServerMessage message : list) {
-            List<Object> arguments = message.arguments;
-            Entry entry = new Entry(Long.parseLong((String) arguments.get(0)), (String) arguments.get(1), Long.parseLong((String) arguments.get(2)), Integer.parseInt((String) arguments.get(3)));
-
-            //entryRepository.save(entry);
-            for (Object s : message.arguments)
-                System.out.println(s);
-            System.out.println(message.timeStamp);
-        }
-
-
-        return ResponseEntity.ok("");
-    }
-
-
 }
