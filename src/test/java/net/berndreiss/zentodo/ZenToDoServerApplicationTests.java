@@ -2,15 +2,19 @@ package net.berndreiss.zentodo;
 
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.util.TestDbHandler;
+import net.berndreiss.zentodo.util.WebConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import net.berndreiss.zentodo.util.ClientStub;
+import org.springframework.context.ConfigurableApplicationContext;
 
+import javax.naming.Context;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
@@ -98,7 +102,9 @@ class ZenToDoServerApplicationTests {
 
 	@Test
 	void basics() throws InterruptedException {
-
+		SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
+		application.setAdditionalProfiles("server.port", "8080");
+		ConfigurableApplicationContext context = application.run();
 		boolean serverRunning = false;
 
 		//while (!serverRunning){
@@ -122,6 +128,7 @@ class ZenToDoServerApplicationTests {
 
 		Assertions.assertFalse(entryReceived.isEmpty());
 
+		context.close();
 
 
 		cleanUp();

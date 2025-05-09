@@ -9,6 +9,7 @@ import net.berndreiss.zentodo.auth.TokenManager;
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.util.*;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -141,7 +142,9 @@ public class Controller {
         List<ZenServerMessage> messageList = new ArrayList<>();
 
         JSONArray array = new JSONArray(messageListString);
-        array.forEach(o -> messageList.add(ZenServerMessage.parse(o.toString())));
+        for (int i = 0; i< array.length(); i++){
+             messageList.add(ZenServerMessage.parse(array.get(i).toString()));
+        }
 
         System.out.println("PROCESSING");
 
