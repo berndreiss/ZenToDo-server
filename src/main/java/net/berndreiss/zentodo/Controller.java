@@ -196,14 +196,14 @@ public class Controller {
 
                     List<Object> args = zm.arguments;
 
-                    long id = Long.parseLong(args.getFirst().toString());
+                    long id = Long.parseLong(args.get(1).toString());
 
                     while (entryService.repository.findById(id).isPresent())
                         id++;
 
-                    if (id != Long.parseLong(args.getFirst().toString())) {
+                    if (id != Long.parseLong(args.get(1).toString())) {
                         List<Object> updateArgs = new ArrayList<>();
-                        updateArgs.add(args.getFirst());
+                        updateArgs.add(args.get(1));
                         updateArgs.add(id);
                         ZenMessage updatedZM = new ZenMessage(OperationType.UPDATE_ID, updateArgs, null);
                         List<Long> deviceContainer = new ArrayList<>();
@@ -212,9 +212,9 @@ public class Controller {
                         //entryService.addToQueue(ClientStub.jsonifyMessage(zm), Collections.singleton(device));
                     }
                     Entry entry = new Entry(
+                            Long.parseLong(args.get(0).toString()),
                             id,
-                            (String) args.get(1),
-                            Long.parseLong(args.get(2).toString()),
+                            (String) args.get(2),
                             Integer.parseInt(args.get(3).toString())
                     );
                     entryService.repository.save(entry);
