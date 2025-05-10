@@ -1,6 +1,7 @@
 package net.berndreiss.zentodo;
 
 import net.berndreiss.zentodo.data.*;
+import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
 import net.berndreiss.zentodo.util.TestDbHandler;
 import net.berndreiss.zentodo.util.WebConfig;
 import org.junit.jupiter.api.Assertions;
@@ -36,6 +37,8 @@ class ZenToDoServerApplicationTests {
 	private QueueRepository queueRepository;
 	@Autowired
 	private MissingQueueUpdatesRepository missingQueueUpdatesRepository;
+	@Autowired
+	private PubSubWebSocketHandler socketHandler;
 
 	 void cleanSlate(){
 		List<Entry> entries = entryRepository.findAll();
@@ -68,10 +71,13 @@ class ZenToDoServerApplicationTests {
 		TestDbHandler opHandler = new TestDbHandler(persistenceUnit);
 		opHandler.tokenPath = userName;
 		ClientStub stub = new  ClientStub(email, opHandler);
-		stub.setExceptionHandler(e->System.out.println(e.getMessage()));
+		stub.setExceptionHandler(e->{
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		});
 		stub.setMessagePrinter(System.out::println);
 		stub.init(()->"Test123!?");
-		List<Entry> entries = stub.getEntries();
+		List<Entry> entries = stub.loadEntries();
 
 		for (Entry e: entries)
 			stub.delete(e.getId());
@@ -101,7 +107,7 @@ class ZenToDoServerApplicationTests {
 	}
 
 	@Test
-	void basics() throws InterruptedException {
+	void synchronousAdd() throws InterruptedException {
 		SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
 		application.setAdditionalProfiles("server.port", "8080");
 		ConfigurableApplicationContext context = application.run();
@@ -118,18 +124,22 @@ class ZenToDoServerApplicationTests {
 		cleanSlate();
 		ClientStub stub0 = getStub("user0", "bd_reiss@yahoo.de", "ZenToDoPU");
 		ClientStub stub1 = getStub("user1", "bd_reiss@yahoo.de", "ZenToDoPU1");
-
-		Entry entry = stub0.addNewEntry("TEST1");
+		ClientStub stub2 = getStub("user2", "bd_reiss@yahoo.de", "ZenToDoPU2");
 
 		Thread.sleep(2000);
-		Optional<Entry> entryReceived = stub1.getEntry(entry.getId());
-		System.out.println("ID:");
-		System.out.println(entry.getId());
+		System.out.println("OPEN SESSIONS: " + socketHandler.getNumberOfSession());
+		System.out.println("SLEEP");
+		Entry entry = stub0.addNewEntry("TEST1");
 
-		Assertions.assertFalse(entryReceived.isEmpty());
+		System.out.println("SLEEP");
+		Thread.sleep(2000);
+		Optional<Entry> entryReceived1 = stub1.getEntry(entry.getId());
+		Optional<Entry> entryReceived2 = stub2.getEntry(entry.getId());
+
+		Assertions.assertTrue(entryReceived1.isPresent());
+		Assertions.assertTrue(entryReceived2.isPresent());
 
 		context.close();
-
 
 		cleanUp();
 	}

@@ -28,11 +28,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
         String email = emailHeader.toString();
         String device = deviceHeader.toString();
-        Map<Long, WebSocketSession> userSessions = sessions.get(email);
-        if (userSessions == null) {
-            userSessions = Collections.synchronizedMap(new HashMap<>());
-            sessions.put(email, userSessions);
-        }
+        Map<Long, WebSocketSession> userSessions = sessions.computeIfAbsent(email, k -> Collections.synchronizedMap(new HashMap<>()));
         userSessions.put(Long.parseLong(device), session);
         System.out.println("Client connected: " + session.getId());
     }
@@ -45,7 +41,19 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessions.remove(session);
+        Object emailHeader = session.getHandshakeHeaders().getFirst("email");
+        Object deviceHeader = session.getHandshakeHeaders().getFirst("device");
+        if (emailHeader == null)
+            throw new RuntimeException("Missing email header");
+        if (deviceHeader == null)
+            throw new RuntimeException("Missing device header");
+
+        String email = emailHeader.toString();
+        String device = deviceHeader.toString();
+        Map<Long, WebSocketSession> userSessions = sessions.get(email);
+        userSessions.remove(Long.parseLong(device));
+        if (userSessions.isEmpty())
+            sessions.remove(email);
         System.out.println("Client disconnected: " + session.getId());
     }
 
@@ -56,6 +64,8 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
             if (socketSessions == null)
                 return notSent;
+            System.out.println("PUBLISHING MESSAGE:");
+            System.out.println(message);
             sessions.get(email).forEach( (key, value) ->{
                 if (devices.contains(key)){
                     try {
@@ -68,6 +78,9 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
             });
             return notSent;
         }
+    }
+    public int getNumberOfSession(){
+        return sessions.size();
     }
 
 }

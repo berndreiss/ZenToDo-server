@@ -1,5 +1,6 @@
 package net.berndreiss.zentodo.util;
 
+import net.berndreiss.zentodo.ZenToDoServerApplication;
 import net.berndreiss.zentodo.data.Acknowledgement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

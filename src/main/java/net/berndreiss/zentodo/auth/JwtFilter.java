@@ -39,7 +39,6 @@ public class JwtFilter extends OncePerRequestFilter {
         String tokenHeader = request.getHeader("Authorization");
 
         User user = null;
-        System.out.println(tokenHeader);
         String email = null;
         String token = null;
         // if bearer token is provided, get the username
@@ -80,12 +79,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String device = request.getHeader("device");
 
-        System.out.println("DEVICE: " + device);
 
         if (device != null){
             if (user != null){
                 user.setDevice(Long.parseLong(device));
-                System.out.println(user.getDevice());
                 userRepository.save(user);
             }
         }

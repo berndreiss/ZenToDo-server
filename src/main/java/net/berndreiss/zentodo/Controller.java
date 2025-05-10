@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
 
 /**
  * TODO DESCRIBE
@@ -39,7 +40,6 @@ public class Controller {
      */
     @PostMapping ("test")
     public ResponseEntity<String> test(){
-        System.out.println("TEST");
         return ResponseEntity.ok("okay");
     }
 
@@ -53,7 +53,6 @@ public class Controller {
     @PostMapping("queue")
     public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
 
-        System.out.println("QUEUE");
         //TODO Authorize queue poll -> add mail to message
 
         List<ZenMessage> messageList = new ArrayList<>();
@@ -103,9 +102,6 @@ public class Controller {
     public synchronized ResponseEntity<String> ackn(@RequestBody Long id, @RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
 
 
-        System.out.println("ACKN");
-
-            System.out.println(tokenManager.getMailFromToken(auth) + id);
 
             List<Acknowledgement> acknowledgements = entryService.acknowledgementRepository.findAll().stream().filter(a -> a.getMessage().getId() == id).toList();
 
@@ -114,8 +110,6 @@ public class Controller {
                 MissingQueueUpdate missingQueueUpdate = entryService.missingQueueUpdatesRepository.findById(a.getMissingQueueUpdateId());
                 if (missingQueueUpdate != null) {
                     missingQueueUpdate.getDevices().remove(device);
-                    System.out.println(missingQueueUpdate.getId());
-                    System.out.println(missingQueueUpdate.getDevices().size());
                     if (missingQueueUpdate.getDevices().isEmpty()) {
                         entryService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
                         entryService.queueRepository.deleteById(missingQueueUpdate.getId());
@@ -139,6 +133,7 @@ public class Controller {
     @PostMapping("process")
     public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
 
+        System.out.println("PROCESSING");
         List<ZenServerMessage> messageList = new ArrayList<>();
 
         JSONArray array = new JSONArray(messageListString);
@@ -146,7 +141,6 @@ public class Controller {
              messageList.add(ZenServerMessage.parse(array.get(i).toString()));
         }
 
-        System.out.println("PROCESSING");
 
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
         List<Long> devices = userService.getOtherDevices(user, device);

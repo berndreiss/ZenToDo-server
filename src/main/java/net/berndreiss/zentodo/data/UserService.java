@@ -74,7 +74,6 @@ public class UserService {
 
         Random random = new Random();
         long userId = random.nextLong();
-        System.out.println("RANDOM: " + userId);
         while(repository.findById(userId).isPresent())
             userId++;
 

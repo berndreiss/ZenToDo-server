@@ -48,7 +48,6 @@ public class AuthController {
 
 
         User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
-        System.out.println(user == null);
         if (user != null){
             userService.addNewDevice(user);
             if (!user.isEnabled())
