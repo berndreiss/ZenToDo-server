@@ -1,8 +1,10 @@
 package net.berndreiss.zentodo;
 
 import net.berndreiss.zentodo.data.*;
+import net.berndreiss.zentodo.data.Entry;
+import net.berndreiss.zentodo.data.QueueItem;
+import net.berndreiss.zentodo.persistence.TestDbHandler;
 import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
-import net.berndreiss.zentodo.util.TestDbHandler;
 import net.berndreiss.zentodo.util.WebConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
@@ -68,8 +70,7 @@ class ZenToDoServerApplicationTests {
 		} catch (Exception e) {
 			System.err.println("Failed to create directory: " + e.getMessage());
 		}
-		TestDbHandler opHandler = new TestDbHandler(persistenceUnit);
-		opHandler.tokenPath = userName;
+		Database opHandler = new TestDbHandler(persistenceUnit, userName);
 		ClientStub stub = new  ClientStub(email, opHandler);
 		stub.setExceptionHandler(e->{
 			System.out.println(e.getMessage());
@@ -80,7 +81,7 @@ class ZenToDoServerApplicationTests {
 		List<Entry> entries = stub.loadEntries();
 
 		for (Entry e: entries)
-			stub.delete(e.getId());
+			stub.removeEntry(e.getId());
 		stub.clearQueue();
 		stub.id = persistenceUnit;
 		return stub;
