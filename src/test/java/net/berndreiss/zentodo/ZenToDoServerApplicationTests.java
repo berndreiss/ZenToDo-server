@@ -1,26 +1,21 @@
 package net.berndreiss.zentodo;
 
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.data.Entry;
 import net.berndreiss.zentodo.data.QueueItem;
-import net.berndreiss.zentodo.persistence.TestDbHandler;
+import net.berndreiss.zentodo.persistence.DbHandler;
 import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
-import net.berndreiss.zentodo.util.WebConfig;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import net.berndreiss.zentodo.util.ClientStub;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import javax.naming.Context;
-import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,7 +65,8 @@ class ZenToDoServerApplicationTests {
 		} catch (Exception e) {
 			System.err.println("Failed to create directory: " + e.getMessage());
 		}
-		Database opHandler = new TestDbHandler(persistenceUnit, userName);
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnit);
+		Database opHandler = new DbHandler(emf, userName);
 		ClientStub stub = new  ClientStub(email, opHandler);
 		stub.setExceptionHandler(e->{
 			System.out.println(e.getMessage());
@@ -112,15 +108,6 @@ class ZenToDoServerApplicationTests {
 		SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
 		application.setAdditionalProfiles("server.port", "8080");
 		ConfigurableApplicationContext context = application.run();
-		boolean serverRunning = false;
-
-		//while (!serverRunning){
-			//try (Socket socket = new Socket("localhost", 8080)) {
-				//serverRunning = true;
-			//} catch (IOException e) {
-				//System.out.println("Server not running.");
-			//}
-		//}
 
 		cleanSlate();
 		ClientStub stub0 = getStub("user0", "bd_reiss@yahoo.de", "ZenToDoPU");
@@ -128,11 +115,8 @@ class ZenToDoServerApplicationTests {
 		ClientStub stub2 = getStub("user2", "bd_reiss@yahoo.de", "ZenToDoPU2");
 
 		Thread.sleep(2000);
-		System.out.println("OPEN SESSIONS: " + socketHandler.getNumberOfSession());
-		System.out.println("SLEEP");
 		Entry entry = stub0.addNewEntry("TEST1");
 
-		System.out.println("SLEEP");
 		Thread.sleep(2000);
 		Optional<Entry> entryReceived1 = stub1.getEntry(entry.getId());
 		Optional<Entry> entryReceived2 = stub2.getEntry(entry.getId());
@@ -142,6 +126,9 @@ class ZenToDoServerApplicationTests {
 
 		context.close();
 
+		stub0.dbHandler.close();
+		stub1.dbHandler.close();
+		stub2.dbHandler.close();
 		cleanUp();
 	}
 
