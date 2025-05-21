@@ -97,6 +97,18 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>com.vaadin.external.google</groupId>
+			<artifactId>android-json</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>com.vaadin.external.google</groupId>
+					<artifactId>android-json</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
 
 	</dependencies>
 

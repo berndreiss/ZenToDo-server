@@ -11,9 +11,7 @@ import java.util.*;
 @Component
 public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
-    public static final Map<String, Map<Long, WebSocketSession>> sessions = Collections.synchronizedMap(new HashMap<>());
-
-    private static Integer id = 0;
+    public static final Map<String, Map<Integer, WebSocketSession>> sessions = Collections.synchronizedMap(new HashMap<>());
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -28,15 +26,14 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
         String email = emailHeader.toString();
         String device = deviceHeader.toString();
-        Map<Long, WebSocketSession> userSessions = sessions.computeIfAbsent(email, k -> Collections.synchronizedMap(new HashMap<>()));
-        userSessions.put(Long.parseLong(device), session);
+        Map<Integer, WebSocketSession> userSessions = sessions.computeIfAbsent(email, k -> Collections.synchronizedMap(new HashMap<>()));
+        userSessions.put(Integer.parseInt(device), session);
         System.out.println("Client connected: " + session.getId());
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         System.out.println("Received message: " + message.getPayload());
-        // Echo back or process client message if needed
     }
 
     @Override
@@ -50,8 +47,8 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
         String email = emailHeader.toString();
         String device = deviceHeader.toString();
-        Map<Long, WebSocketSession> userSessions = sessions.get(email);
-        userSessions.remove(Long.parseLong(device));
+        Map<Integer, WebSocketSession> userSessions = sessions.get(email);
+        userSessions.remove(Integer.parseInt(device));
         if (userSessions.isEmpty())
             sessions.remove(email);
         System.out.println("Client disconnected: " + session.getId());
@@ -60,7 +57,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
     public List<Integer> publishEvent(String id, String message, String email, List<Integer> devices) {
         synchronized (sessions) {
             List<Integer> notSent = new ArrayList<>(devices);
-            Map<Long, WebSocketSession> socketSessions = sessions.get(email);
+            Map<Integer, WebSocketSession> socketSessions = sessions.get(email);
 
             if (socketSessions == null)
                 return notSent;
