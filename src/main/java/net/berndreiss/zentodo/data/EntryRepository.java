@@ -8,5 +8,4 @@ import java.util.Optional;
  * TODO DESCRIBE
  */
 public interface EntryRepository extends JpaRepository<Entry, Long> {
-    Optional<Entry> findById(long id);
 }

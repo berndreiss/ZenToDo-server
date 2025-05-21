@@ -145,7 +145,6 @@ public class AuthController {
             return ResponseEntity.ok(status);
 
 
-        System.out.println("STATUS");
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
@@ -155,13 +154,10 @@ public class AuthController {
             throw new Exception("INVALID_CREDENTIALS", e);
         }
 
-        if (status.equals("enabled")){
-            User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
-            if (user == null)
-                throw new Exception("User not retrieved.");
-            return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(new UserWrapper(user)));
-        }
-        return ResponseEntity.ok(status);
+        User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
+        if (user == null)
+            throw new Exception("User not retrieved.");
+        return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(new UserWrapper(user)));
 
     }
 }
