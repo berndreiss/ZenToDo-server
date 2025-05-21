@@ -17,7 +17,7 @@ public class EventPublisherController {
     }
 
     @GetMapping("/publish")
-    public List<Long> publish(String id, @RequestParam String message, String email, List<Long> devices) {
+    public List<Integer> publish(String id, @RequestParam String message, String email, List<Integer> devices) {
         return webSocketHandler.publishEvent(id, message, email, devices);
     }
 }

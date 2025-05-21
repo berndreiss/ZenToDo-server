@@ -17,7 +17,7 @@ public class MissingQueueUpdate {
     private long id;
 
     @Column
-    private List<Long> devices = new ArrayList<>();
+    private List<Integer> devices = new ArrayList<>();
 
     @Column (nullable = false)
     private String clock;

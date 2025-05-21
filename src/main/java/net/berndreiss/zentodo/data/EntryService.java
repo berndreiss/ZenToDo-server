@@ -26,7 +26,7 @@ public class EntryService {
         repository.save(entry);
     }
 
-    public void addToQueue(ZenServerMessage zenMessage, User user, List<Long> devices, Message message){
+    public void addToQueue(ZenServerMessage zenMessage, User user, List<Integer> devices, Message message){
 
         QueueItem queueItem = new QueueItem();
         queueItem.setClock(zenMessage.clock.jsonify());

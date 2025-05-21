@@ -57,9 +57,9 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
         System.out.println("Client disconnected: " + session.getId());
     }
 
-    public List<Long> publishEvent(String id, String message, String email, List<Long> devices) {
+    public List<Integer> publishEvent(String id, String message, String email, List<Integer> devices) {
         synchronized (sessions) {
-            List<Long> notSent = new ArrayList<>(devices);
+            List<Integer> notSent = new ArrayList<>(devices);
             Map<Long, WebSocketSession> socketSessions = sessions.get(email);
 
             if (socketSessions == null)

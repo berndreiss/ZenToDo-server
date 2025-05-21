@@ -60,7 +60,7 @@ public class UserService {
                     .sorted(Comparator.comparingInt(d -> (int) d.getId()))
                     .toList();
         }
-        long deviceId = 0;
+        int deviceId = 0;
         if (deviceList != null && !deviceList.isEmpty())
             deviceId = deviceList.getFirst().getId() + 1;
 
@@ -125,7 +125,7 @@ public class UserService {
                 .sorted(Comparator.comparingInt(d -> (int) d.getId()))
                 .toList();
 
-        long deviceId = 0;
+        int deviceId = 0;
         if (!deviceList.isEmpty())
             deviceId = deviceList.getLast().getId() + 1;
 
@@ -169,14 +169,14 @@ public class UserService {
         return repository.findByEmail(email).orElse(null);
     }
 
-    public List<Long> getOtherDevices(User user, Long device){
+    public List<Integer> getOtherDevices(User user, Integer device){
         return deviceRepository.findAll().stream()
                 .filter(d -> Objects.equals(d.getUser().getId(), user.getId()) && d.getId() != device)
                 .map(Device::getId)
                 .toList();
 
     }
-    public List<Long> getDevices(User user){
+    public List<Integer> getDevices(User user){
         return deviceRepository.findAll().stream()
                 .map(Device::getId)
                 .toList();

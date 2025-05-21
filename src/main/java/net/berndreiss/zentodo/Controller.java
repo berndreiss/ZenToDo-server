@@ -51,7 +51,7 @@ public class Controller {
      * @return
      */
     @PostMapping("queue")
-    public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
+    public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
 
         //TODO Authorize queue poll -> add mail to message
 
@@ -131,7 +131,7 @@ public class Controller {
      * @return
      */
     @PostMapping("process")
-    public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
+    public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
 
         System.out.println("PROCESSING");
         List<ZenServerMessage> messageList = new ArrayList<>();
@@ -143,7 +143,7 @@ public class Controller {
 
 
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
-        List<Long> devices = userService.getOtherDevices(user, device);
+        List<Integer> devices = userService.getOtherDevices(user, device);
 
         Message message = new Message();
         messageRepository.save(message);
@@ -165,54 +165,55 @@ public class Controller {
 
             switch (zm.type) {
                 case ADD_NEW_ENTRY -> {
-                    int originalPosition = Integer.parseInt(zm.arguments.get(3).toString());
+                    int originalPosition = Integer.parseInt(zm.arguments.get(4).toString());
                     for (QueueItem qi: queue) {
 
-                        List<Long> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
+                        List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
 
                         if (!missingDevices.contains(device) || qi.getType() != OperationType.ADD_NEW_ENTRY)
                             continue;
 
-                        if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
+                        if (Integer.parseInt(qi.getArguments().get(4)) < Integer.parseInt(zm.arguments.get(4).toString()))
                             continue;
 
                         if (qi.getTimeStamp().isAfter(zm.timeStamp)){
-                            qi.getArguments().set(3, String.valueOf(Integer.parseInt(qi.getArguments().get(3)) + 1));
+                            qi.getArguments().set(4, String.valueOf(Integer.parseInt(qi.getArguments().get(4)) + 1));
                             entryService.queueRepository.save(qi);
                         } else
-                            zm.arguments.set(3, Integer.parseInt(zm.arguments.get(3).toString()) + 1);
+                            zm.arguments.set(4, Integer.parseInt(zm.arguments.get(4).toString()) + 1);
 
                     }
 
-                    int toAdd = (int) alreadyAddedPositions.stream().filter(i -> i <= Integer.parseInt(zm.arguments.get(3).toString())).count();
+                    int toAdd = (int) alreadyAddedPositions.stream().filter(i -> i <= Integer.parseInt(zm.arguments.get(4).toString())).count();
 
-                    int finalPosition = Integer.parseInt(zm.arguments.get(3).toString()) + toAdd;
-                    zm.arguments.set(3, finalPosition);
+                    int finalPosition = Integer.parseInt(zm.arguments.get(4).toString()) + toAdd;
+                    zm.arguments.set(4, finalPosition);
                     if (originalPosition != finalPosition)
                         alreadyAddedPositions.add(finalPosition);
 
                     List<Object> args = zm.arguments;
 
-                    long id = Long.parseLong(args.get(1).toString());
+                    long id = Long.parseLong(args.get(2).toString());
 
                     while (entryService.repository.findById(id).isPresent())
                         id++;
 
-                    if (id != Long.parseLong(args.get(1).toString())) {
+                    if (id != Long.parseLong(args.get(2).toString())) {
                         List<Object> updateArgs = new ArrayList<>();
-                        updateArgs.add(args.get(1));
+                        updateArgs.add(args.get(2));
                         updateArgs.add(id);
                         ZenMessage updatedZM = new ZenMessage(OperationType.UPDATE_ID, updateArgs, null);
-                        List<Long> deviceContainer = new ArrayList<>();
+                        List<Integer> deviceContainer = new ArrayList<>();
                         deviceContainer.add(device);
                         eventPublisherController.publish(clock.jsonify(), ClientStub.jsonifyMessage(updatedZM), user.getEmail(), deviceContainer);
                         //entryService.addToQueue(ClientStub.jsonifyMessage(zm), Collections.singleton(device));
                     }
                     Entry entry = new Entry(
                             Long.parseLong(args.get(0).toString()),
+                            Integer.parseInt(args.get(1).toString()),
                             id,
-                            (String) args.get(2),
-                            Integer.parseInt(args.get(3).toString())
+                            (String) args.get(3),
+                            Integer.parseInt(args.get(4).toString())
                     );
                     entryService.repository.save(entry);
 
