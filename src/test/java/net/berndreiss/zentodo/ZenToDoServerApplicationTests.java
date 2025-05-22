@@ -10,6 +10,7 @@ import net.berndreiss.zentodo.data.QueueItem;
 import net.berndreiss.zentodo.persistence.DbHandler;
 import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
 import net.berndreiss.zentodo.util.VectorClock;
+import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -136,15 +138,27 @@ class ZenToDoServerApplicationTests {
 		ClientStub stub2 = getStub("user2", mail, "ZenToDoPU2");
 
 		Thread.sleep(2000);
-		Entry entry = stub0.addNewEntry("TEST1");
+		List<Entry> addedEntries = new ArrayList<>();
+		addedEntries.add(stub0.addNewEntry("TEST0"));
+		addedEntries.add(stub1.addNewEntry("TEST1"));
+		addedEntries.add(stub2.addNewEntry("TEST2"));
 
 		Thread.sleep(2000);
-		Optional<Entry> entryReceived1 = stub1.getEntry(entry.getId());
-		Optional<Entry> entryReceived2 = stub2.getEntry(entry.getId());
 
-		Assertions.assertTrue(entryReceived1.isPresent());
-		Assertions.assertTrue(entryReceived2.isPresent());
+		List<Entry> entries0 = stub0.loadEntries();
+		List<Entry> entries1 = stub1.loadEntries();
+		List<Entry> entries2 = stub2.loadEntries();
+        Assertions.assertEquals(entries0.size(), addedEntries.size(), "First stub has wrong number of entries.");
+        Assertions.assertEquals(entries1.size(), addedEntries.size(), "Second stub has wrong number of entries.");
+        Assertions.assertEquals(entries2.size(), addedEntries.size(), "Third stub has wrong number of entries.");
+		for (int i = 0; i < addedEntries.size(); i++){
+			Assertions.assertEquals(entries0.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 0");
+			Assertions.assertEquals(entries1.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 1");
+			Assertions.assertEquals(entries2.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 2");
+		}
 
+		List<MissingQueueUpdate> updates = missingQueueUpdatesRepository.findAll();
+		Assert.assertTrue("There are still missing updates.", updates.isEmpty());
 		context.close();
 
 		stub0.dbHandler.close();

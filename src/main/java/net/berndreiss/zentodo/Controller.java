@@ -135,6 +135,7 @@ public class Controller {
 
         System.out.println("PROCESSING");
         List<ZenServerMessage> messageList = new ArrayList<>();
+        System.out.println(ClientStub.jsonifyServerList(messageList));
 
         JSONArray array = new JSONArray(messageListString);
         for (int i = 0; i< array.length(); i++){
@@ -250,7 +251,6 @@ public class Controller {
 
         }
 
-        System.out.println(ClientStub.jsonifyServerList(messageList));
         eventPublisherController.publish(String.valueOf(message.getId()), ClientStub.jsonifyServerList(messageList), user.getEmail(), devices);
 
         return ResponseEntity.ok("");
