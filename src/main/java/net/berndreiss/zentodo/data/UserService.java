@@ -3,7 +3,6 @@ package net.berndreiss.zentodo.data;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.Controller;
 import net.berndreiss.zentodo.auth.EmailService;
 import net.berndreiss.zentodo.auth.TokenManager;
 import net.berndreiss.zentodo.util.VectorClock;

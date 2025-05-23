@@ -30,16 +30,16 @@ public class StartupTasks {
 
         if (!disabledUsers.isEmpty())
             System.out.println("Removed disabled users.");
-        Random random = new Random();
-        long userId = random.nextLong();
-        while(userRepository.findById(userId).isPresent())
-            userId++;
-        User user = new User();
-        user.setEmail("test@test.net");
-        user.setId(userId);
-        user.setClock((new VectorClock().jsonify()));
-        user.setPassword(passwordEncoder.encode("Test1234!?"));
-        user.setEnabled(true);
-        userRepository.save(user);
+        //Random random = new Random();
+        //long userId = random.nextLong();
+        //while(userRepository.findById(userId).isPresent())
+            //userId++;
+        //User user = new User();
+        //user.setEmail("test@test.net");
+        //user.setId(userId);
+        //user.setClock((new VectorClock().jsonify()));
+        //user.setPassword(passwordEncoder.encode("Test1234!?"));
+        //user.setEnabled(true);
+        //userRepository.save(user);
     }
 }

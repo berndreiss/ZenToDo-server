@@ -200,7 +200,6 @@ public class Controller {
                                     Integer.parseInt(args.get(3).toString())
                             );
                             entryService.repository.save(entry);
-
                         }
                         case DELETE -> {
                         }
