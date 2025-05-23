@@ -128,43 +128,48 @@ class ZenToDoServerApplicationTests {
 
 	@Test
 	void synchronousAdd() throws Exception {
-		SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
-		application.setAdditionalProfiles("server.port", "8080");
-		ConfigurableApplicationContext context = application.run();
 
-		cleanSlate();
-		ClientStub stub0 = getStub("user0", mail, "ZenToDoPU");
-		ClientStub stub1 = getStub("user1", mail, "ZenToDoPU1");
-		ClientStub stub2 = getStub("user2", mail, "ZenToDoPU2");
+		for (int n = 0; n < 10; n++) {
+			SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
+			application.setAdditionalProfiles("server.port", "8080");
+			ConfigurableApplicationContext context = application.run();
+			cleanSlate();
+			ClientStub stub0 = getStub("user0", mail, "ZenToDoPU");
+			ClientStub stub1 = getStub("user1", mail, "ZenToDoPU1");
+			ClientStub stub2 = getStub("user2", mail, "ZenToDoPU2");
 
-		Thread.sleep(2000);
-		List<Entry> addedEntries = new ArrayList<>();
-		addedEntries.add(stub0.addNewEntry("TEST0"));
-		addedEntries.add(stub1.addNewEntry("TEST1"));
-		addedEntries.add(stub2.addNewEntry("TEST2"));
+			int x = 2000;
+			List<Entry> addedEntries = new ArrayList<>();
+			Thread.sleep(x);
+			addedEntries.add(stub0.addNewEntry("TEST0"));
+			//Thread.sleep(x);
+			addedEntries.add(stub1.addNewEntry("TEST1"));
+			//Thread.sleep(x);
+			addedEntries.add(stub2.addNewEntry("TEST2"));
+			Thread.sleep(x);
 
-		Thread.sleep(2000);
 
-		List<Entry> entries0 = stub0.loadEntries();
-		List<Entry> entries1 = stub1.loadEntries();
-		List<Entry> entries2 = stub2.loadEntries();
-        Assertions.assertEquals(entries0.size(), addedEntries.size(), "First stub has wrong number of entries.");
-        Assertions.assertEquals(entries1.size(), addedEntries.size(), "Second stub has wrong number of entries.");
-        Assertions.assertEquals(entries2.size(), addedEntries.size(), "Third stub has wrong number of entries.");
-		for (int i = 0; i < addedEntries.size(); i++){
-			Assertions.assertEquals(entries0.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 0");
-			Assertions.assertEquals(entries1.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 1");
-			Assertions.assertEquals(entries2.get(i).getTask(), addedEntries.get(i).getTask(), "Entry " + i + " does not match for stub 2");
+			List<Entry> entries0 = stub0.loadEntries();
+			List<Entry> entries1 = stub1.loadEntries();
+			List<Entry> entries2 = stub2.loadEntries();
+			Assertions.assertEquals(entries0.size(), addedEntries.size(), "First stub has wrong number of entries.");
+			Assertions.assertEquals(entries1.size(), addedEntries.size(), "Second stub has wrong number of entries.");
+			Assertions.assertEquals(entries2.size(), addedEntries.size(), "Third stub has wrong number of entries.");
+			for (int i = 0; i < addedEntries.size(); i++) {
+				Assertions.assertEquals(entries0.get(i).getTask(), entries1.get(i).getTask(), "Entry " + i + " does not match all stubs");
+				Assertions.assertEquals(entries1.get(i).getTask(), entries2.get(i).getTask(), "Entry " + i + " does not match all stubs");
+				Assertions.assertEquals(entries0.get(i).getId(), entries1.get(i).getId(), "Entry " + i + " does not match all stubs");
+				Assertions.assertEquals(entries1.get(i).getId(), entries2.get(i).getId(), "Entry " + i + " does not match all stubs");
+			}
+
+			List<MissingQueueUpdate> updates = missingQueueUpdatesRepository.findAll();
+			Assert.assertTrue("There are still missing updates.", updates.isEmpty());
+			context.close();
+			stub0.dbHandler.close();
+			stub1.dbHandler.close();
+			stub2.dbHandler.close();
+			cleanUp();
 		}
-
-		List<MissingQueueUpdate> updates = missingQueueUpdatesRepository.findAll();
-		Assert.assertTrue("There are still missing updates.", updates.isEmpty());
-		context.close();
-
-		stub0.dbHandler.close();
-		stub1.dbHandler.close();
-		stub2.dbHandler.close();
-		cleanUp();
 	}
 
 

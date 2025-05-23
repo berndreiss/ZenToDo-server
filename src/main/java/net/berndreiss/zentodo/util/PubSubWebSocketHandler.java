@@ -61,8 +61,6 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
 
             if (socketSessions == null)
                 return notSent;
-            System.out.println("PUBLISHING MESSAGE:");
-            System.out.println(message);
             sessions.get(email).forEach( (key, value) ->{
                 if (devices.contains(key)){
                     try {

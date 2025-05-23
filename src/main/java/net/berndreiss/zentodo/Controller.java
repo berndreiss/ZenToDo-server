@@ -1,23 +1,22 @@
 package net.berndreiss.zentodo;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import lombok.Getter;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.auth.TokenManager;
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.util.*;
 import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static com.fasterxml.jackson.databind.type.LogicalType.DateTime;
 
 /**
  * TODO DESCRIBE
@@ -29,6 +28,7 @@ public class Controller {
 
     private final UserService userService;
     private final EntryService entryService;
+    private final AcknowledgementService acknowledgementService;
     private final MessageRepository messageRepository;
     private final EventPublisherController eventPublisherController;
     private final TokenManager tokenManager;
@@ -61,6 +61,9 @@ public class Controller {
 
         List<MissingQueueUpdate> missingQueueUpdates = entryService.missingQueueUpdatesRepository.findAll().stream()
                 .filter(u -> u.getDevices().contains(device)).toList();
+
+        if (missingQueueUpdates.isEmpty())
+            return ResponseEntity.ok("");
 
         for (MissingQueueUpdate u: missingQueueUpdates){
             if (message == null){
@@ -99,30 +102,10 @@ public class Controller {
     }
 
     @PostMapping("ackn")
-    public synchronized ResponseEntity<String> ackn(@RequestBody Long id, @RequestHeader("Authorization") String auth, @RequestHeader("device") Long device){
+    public synchronized ResponseEntity<String> ackn(@RequestBody Long id, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device) {
 
-
-
-            List<Acknowledgement> acknowledgements = entryService.acknowledgementRepository.findAll().stream().filter(a -> a.getMessage().getId() == id).toList();
-
-
-            acknowledgements.forEach(a -> {
-                MissingQueueUpdate missingQueueUpdate = entryService.missingQueueUpdatesRepository.findById(a.getMissingQueueUpdateId());
-                if (missingQueueUpdate != null) {
-                    missingQueueUpdate.getDevices().remove(device);
-                    if (missingQueueUpdate.getDevices().isEmpty()) {
-                        entryService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
-                        entryService.queueRepository.deleteById(missingQueueUpdate.getId());
-                    } else
-                        entryService.missingQueueUpdatesRepository.save(missingQueueUpdate);
-                }
-            });
-
-            for (Acknowledgement a: acknowledgements)
-                entryService.acknowledgementRepository.delete(a);
-
-            messageRepository.deleteById(id);
-            return ResponseEntity.ok("ackn");
+        acknowledgementService.processAcknowledgement(id, device);
+        return ResponseEntity.ok("ackn");
     }
 
     /**
@@ -131,128 +114,127 @@ public class Controller {
      * @return
      */
     @PostMapping("process")
-    public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
-
-        System.out.println("PROCESSING");
-        List<ZenServerMessage> messageList = new ArrayList<>();
-        System.out.println(ClientStub.jsonifyServerList(messageList));
-
-        JSONArray array = new JSONArray(messageListString);
-        for (int i = 0; i< array.length(); i++){
-             messageList.add(ZenServerMessage.parse(array.get(i).toString()));
-        }
-
+    public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device) throws InterruptedException {
 
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
-        List<Integer> devices = userService.getOtherDevices(user, device);
 
-        Message message = new Message();
-        messageRepository.save(message);
+            List<ZenServerMessage> messageList = new ArrayList<>();
 
-        if (user == null)
-            return ResponseEntity.status(401).build();
-
-
-        List<QueueItem> queue = entryService.getQueue(user).stream().sorted(Comparator.comparing(QueueItem::getTimeStamp)).toList();
-
-        List<Integer> alreadyAddedPositions = new ArrayList<>();
-        for (ZenServerMessage zm: messageList) {
-            VectorClock clock = new VectorClock(user.getClock());
-
-            clock.increment(device);
-            user.setClock(clock.jsonify());
-            userService.repository.save(user);
-
-
-            switch (zm.type) {
-                case ADD_NEW_ENTRY -> {
-                    int originalPosition = Integer.parseInt(zm.arguments.get(3).toString());
-                    for (QueueItem qi: queue) {
-
-                        List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
-
-                        if (!missingDevices.contains(device) || qi.getType() != OperationType.ADD_NEW_ENTRY)
-                            continue;
-
-                        if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
-                            continue;
-
-                        if (qi.getTimeStamp().isAfter(zm.timeStamp)){
-                            qi.getArguments().set(3, String.valueOf(Integer.parseInt(qi.getArguments().get(3)) + 1));
-                            entryService.queueRepository.save(qi);
-                        } else
-                            zm.arguments.set(3, Integer.parseInt(zm.arguments.get(3).toString()) + 1);
-
-                    }
-
-                    int toAdd = (int) alreadyAddedPositions.stream().filter(i -> i <= Integer.parseInt(zm.arguments.get(3).toString())).count();
-
-                    int finalPosition = Integer.parseInt(zm.arguments.get(3).toString()) + toAdd;
-                    zm.arguments.set(3, finalPosition);
-                    if (originalPosition != finalPosition)
-                        alreadyAddedPositions.add(finalPosition);
-
-                    List<Object> args = zm.arguments;
-
-                    long id = Long.parseLong(args.get(1).toString());
-
-                    while (entryService.repository.findById(id).isPresent())
-                        id++;
-
-                    if (id != Long.parseLong(args.get(1).toString())) {
-                        List<Object> updateArgs = new ArrayList<>();
-                        updateArgs.add(args.get(1));
-                        updateArgs.add(id);
-                        ZenMessage updatedZM = new ZenMessage(OperationType.UPDATE_ID, updateArgs, null);
-                        List<Integer> deviceContainer = new ArrayList<>();
-                        deviceContainer.add(device);
-                        eventPublisherController.publish(clock.jsonify(), ClientStub.jsonifyMessage(updatedZM), user.getEmail(), deviceContainer);
-                        //entryService.addToQueue(ClientStub.jsonifyMessage(zm), Collections.singleton(device));
-                    }
-                    Entry entry = new Entry(
-                            user.getId(),
-                            Integer.parseInt(args.get(0).toString()),
-                            id,
-                            (String) args.get(2),
-                            Integer.parseInt(args.get(3).toString())
-                    );
-                    entryService.repository.save(entry);
-
-                }
-                case DELETE -> {
-                }
-                case SWAP -> {
-                }
-                case SWAP_LIST -> {
-                }
-                case UPDATE_TASK -> {
-                }
-                case UPDATE_FOCUS -> {
-                }
-                case UPDATE_DROPPED -> {
-                }
-                case UPDATE_RECURRENCE -> {
-                }
-                case UPDATE_REMINDER_DATE -> {
-                }
-                case UPDATE_LIST -> {
-                }
-                case UPDATE_LIST_COLOR -> {
-                }
-                case UPDATE_MAIL -> {
-                }
-                case UPDATE_USER_NAME -> {
-                }
-                default -> {
-                    return ResponseEntity.badRequest().build();
-                }
+            JSONArray array = new JSONArray(messageListString);
+            for (int i = 0; i < array.length(); i++) {
+                messageList.add(ZenServerMessage.parse(array.get(i).toString()));
             }
-            entryService.addToQueue(zm, user, devices, message);
+            if (messageList.isEmpty())
+                return ResponseEntity.ok("");
 
-        }
+                List<Integer> devices = userService.getOtherDevices(user, device);
 
-        eventPublisherController.publish(String.valueOf(message.getId()), ClientStub.jsonifyServerList(messageList), user.getEmail(), devices);
+                Message message = new Message();
+                messageRepository.save(message);
 
-        return ResponseEntity.ok("");
+                if (user == null)
+                    return ResponseEntity.status(401).build();
+
+
+
+                List<Integer> alreadyAddedPositions = new ArrayList<>();
+                for (ZenServerMessage zm : messageList) {
+                    VectorClock clock = new VectorClock(user.getClock());
+
+                    clock.increment(device);
+                    user.setClock(clock.jsonify());
+                    userService.repository.save(user);
+
+
+                    switch (zm.type) {
+                        case ADD_NEW_ENTRY -> {
+                            int originalPosition = Integer.parseInt(zm.arguments.get(3).toString());
+                            List<QueueItem> queue = entryService.getQueue(user).stream().sorted(Comparator.comparing(QueueItem::getTimeStamp)).toList();
+                            for (QueueItem qi : queue) {
+
+                                List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
+
+                                if (!missingDevices.contains(device) || qi.getType() != OperationType.ADD_NEW_ENTRY)
+                                    continue;
+
+                                if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
+                                    continue;
+
+                                if (qi.getTimeStamp().isAfter(zm.timeStamp)) {
+                                    qi.getArguments().set(3, String.valueOf(Integer.parseInt(qi.getArguments().get(3)) + 1));
+                                    entryService.queueRepository.saveAndFlush(qi);
+                                } else
+                                    zm.arguments.set(3, Integer.parseInt(zm.arguments.get(3).toString()) + 1);
+
+                            }
+
+                            int toAdd = (int) alreadyAddedPositions.stream().filter(i -> i <= Integer.parseInt(zm.arguments.get(3).toString())).count();
+
+                            int finalPosition = Integer.parseInt(zm.arguments.get(3).toString()) + toAdd;
+                            zm.arguments.set(3, finalPosition);
+                            if (originalPosition != finalPosition)
+                                alreadyAddedPositions.add(finalPosition);
+
+                            List<Object> args = zm.arguments;
+
+                            long id = Long.parseLong(args.get(1).toString());
+
+                            while (entryService.repository.findById(id).isPresent())
+                                id++;
+
+                            if (id != Long.parseLong(args.get(1).toString())) {
+                                List<Object> updateArgs = new ArrayList<>();
+                                updateArgs.add(args.get(1));
+                                updateArgs.add(id);
+                                ZenMessage updatedZM = new ZenMessage(OperationType.UPDATE_ID, updateArgs, null);
+                                List<Integer> deviceContainer = new ArrayList<>();
+                                deviceContainer.add(device);
+                                eventPublisherController.publish(clock.jsonify(), ClientStub.jsonifyMessage(updatedZM), user.getEmail(), deviceContainer);
+                                //entryService.addToQueue(ClientStub.jsonifyMessage(zm), Collections.singleton(device));
+                            }
+                            Entry entry = new Entry(
+                                    user.getId(),
+                                    Integer.parseInt(args.get(0).toString()),
+                                    id,
+                                    (String) args.get(2),
+                                    Integer.parseInt(args.get(3).toString())
+                            );
+                            entryService.repository.save(entry);
+
+                        }
+                        case DELETE -> {
+                        }
+                        case SWAP -> {
+                        }
+                        case SWAP_LIST -> {
+                        }
+                        case UPDATE_TASK -> {
+                        }
+                        case UPDATE_FOCUS -> {
+                        }
+                        case UPDATE_DROPPED -> {
+                        }
+                        case UPDATE_RECURRENCE -> {
+                        }
+                        case UPDATE_REMINDER_DATE -> {
+                        }
+                        case UPDATE_LIST -> {
+                        }
+                        case UPDATE_LIST_COLOR -> {
+                        }
+                        case UPDATE_MAIL -> {
+                        }
+                        case UPDATE_USER_NAME -> {
+                        }
+                        default -> {
+                            return ResponseEntity.badRequest().build();
+                        }
+                    }
+                    entryService.addToQueue(zm, user, devices, message);
+
+                }
+
+                eventPublisherController.publish(String.valueOf(message.getId()), ClientStub.jsonifyServerList(messageList), user.getEmail(), devices);
+            return ResponseEntity.ok("");
     }
 }
