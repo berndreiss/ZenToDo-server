@@ -1,22 +1,14 @@
 package net.berndreiss.zentodo;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.auth.TokenManager;
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.util.*;
 import org.json.JSONArray;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.DateTimeException;
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static com.fasterxml.jackson.databind.type.LogicalType.DateTime;
 
 /**
  * TODO DESCRIBE
@@ -148,13 +140,16 @@ public class Controller {
 
                     switch (zm.type) {
                         case ADD_NEW_ENTRY -> {
+                            int profile = Integer.parseInt(zm.arguments.getFirst().toString());
                             int originalPosition = Integer.parseInt(zm.arguments.get(3).toString());
                             List<QueueItem> queue = entryService.getQueue(user).stream().sorted(Comparator.comparing(QueueItem::getTimeStamp)).toList();
                             for (QueueItem qi : queue) {
 
                                 List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
 
-                                if (!missingDevices.contains(device) || qi.getType() != OperationType.ADD_NEW_ENTRY)
+                                if (!missingDevices.contains(device) ||
+                                        Integer.parseInt(qi.getArguments().getFirst()) != profile ||
+                                        qi.getType() != OperationType.ADD_NEW_ENTRY)
                                     continue;
 
                                 if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
@@ -179,7 +174,7 @@ public class Controller {
 
                             long id = Long.parseLong(args.get(1).toString());
 
-                            while (entryService.repository.findById(id).isPresent())
+                            while (entryService.entryRepository.findById(id).isPresent())
                                 id++;
 
                             if (id != Long.parseLong(args.get(1).toString())) {
@@ -194,14 +189,54 @@ public class Controller {
                             }
                             Entry entry = new Entry(
                                     user.getId(),
-                                    Integer.parseInt(args.get(0).toString()),
+                                    profile,
                                     id,
                                     (String) args.get(2),
                                     Integer.parseInt(args.get(3).toString())
                             );
-                            entryService.repository.save(entry);
+                            entryService.entryRepository.save(entry);
                         }
                         case DELETE -> {
+                            //TODO REMOVE FROM QUEUE TOO
+                            int profile = Integer.parseInt(zm.arguments.getFirst().toString());
+                            long id = Long.parseLong(zm.arguments.get(1).toString());
+                            Optional<Entry> entry = entryService.entryRepository.findById(id);
+
+                            //We assume this delete is redundant
+                            if (entry.isEmpty())
+                                return ResponseEntity.ok("Entry already deleted");
+
+                            //We have to adjust positions and list positions of entries that are queued
+                            List<QueueItem> queue = entryService.getQueue(user).stream().sorted(Comparator.comparing(QueueItem::getTimeStamp)).toList();
+                            for (QueueItem qi : queue) {
+
+                                List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
+
+                                if (!missingDevices.contains(device) || Integer.parseInt(qi.getArguments().getFirst()) != profile)
+                                    continue;
+
+                                switch (qi.getType()) {
+                                    case OperationType.ADD_NEW_ENTRY:
+                                        //TODO IMPLEMENT
+                                        if (Integer.parseInt(qi.getArguments().get(3)) > entry.get().getPosition()) {
+                                            entryService.queueRepository.saveAndFlush(qi);
+                                        }
+                                        break;
+                                    case OperationType.SWAP:
+                                        //TODO IMPLEMENT
+                                        break;
+                                    case OperationType.UPDATE_LIST:
+                                        //TODO IMPLEMENT
+                                        break;
+                                    case OperationType.SWAP_LIST:
+                                        //TODO IMPLEMENT
+                                        break;
+                                    default:
+                                }
+
+                            }
+
+                            entryService.entryRepository.delete(entry.get());
                         }
                         case SWAP -> {
                         }

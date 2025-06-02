@@ -1,7 +1,6 @@
 package net.berndreiss.zentodo.data;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.util.ZenMessage;
 import net.berndreiss.zentodo.util.ZenServerMessage;
 import org.springframework.stereotype.Service;
 
@@ -13,17 +12,17 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class EntryService {
-    public final EntryRepository repository;
+    public final EntryRepository entryRepository;
     public final QueueRepository queueRepository;
     public final MissingQueueUpdatesRepository missingQueueUpdatesRepository;
     public final AcknowledgementRepository acknowledgementRepository;
 
     public List<Entry> getAllEntries(){
-        return repository.findAll();
+        return entryRepository.findAll();
     }
 
     public void addEntry(Entry entry){
-        repository.save(entry);
+        entryRepository.save(entry);
     }
 
     public void addToQueue(ZenServerMessage zenMessage, User user, List<Integer> devices, Message message) throws InterruptedException {
