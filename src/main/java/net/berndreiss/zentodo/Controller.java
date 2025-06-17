@@ -13,9 +13,10 @@ import java.util.*;
 /**
  * TODO DESCRIBE
  */
+@CrossOrigin(origins = "*")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/")
+@RequestMapping("/api")
 public class Controller {
 
     private final UserService userService;
@@ -108,6 +109,8 @@ public class Controller {
     @PostMapping("process")
     public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device) throws InterruptedException {
 
+        System.out.println("PROCESSING:");
+        System.out.println(messageListString);
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
 
             List<ZenServerMessage> messageList = new ArrayList<>();

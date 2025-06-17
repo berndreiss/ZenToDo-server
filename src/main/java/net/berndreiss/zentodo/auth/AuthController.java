@@ -25,8 +25,9 @@ import java.util.*;
 /**
  * TODO DECRIBE
  */
+@CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -136,6 +137,7 @@ public class AuthController {
     @PostMapping("/status")
     public ResponseEntity<String> status(@RequestBody JwtRequestModel requestModel) throws Exception {
 
+        System.out.println("STATUS FOR " + requestModel.getEmail());
         String status = userService.exists(requestModel.getEmail());
 
         if (status == null)
