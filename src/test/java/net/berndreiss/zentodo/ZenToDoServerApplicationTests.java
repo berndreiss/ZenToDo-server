@@ -5,15 +5,11 @@ import jakarta.persistence.Persistence;
 import net.berndreiss.zentodo.data.*;
 import net.berndreiss.zentodo.data.Entry;
 import net.berndreiss.zentodo.persistence.DbHandler;
-import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
 import net.berndreiss.zentodo.util.VectorClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import net.berndreiss.zentodo.util.ClientStub;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -30,27 +26,13 @@ import java.util.Random;
 @SpringBootTest
 class ZenToDoServerApplicationTests {
 
-	private static final String mail = "test@test.net";
-	private static final String password = "Test1234!?";
-	private static User user;
-	private static final int SYNC_DELAY = 2000;
-	private static final int RUNS = 1;
+	public static final String mail = "test@test.net";
+	public static final String password = "Test1234!?";
+	public static final int SYNC_DELAY = 2000;
+	public static final int RUNS = 1;
 
-	@Autowired
-	private UserService userService;
-	@Autowired
-	private UserRepository userRepository;
-	@Autowired
-	private EntryRepository entryRepository;
-	@Autowired
-	private QueueRepository queueRepository;
-	@Autowired
-	private MissingQueueUpdatesRepository missingQueueUpdatesRepository;
-	@Autowired
-	private PubSubWebSocketHandler socketHandler;
-	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-	 void cleanSlate() throws InterruptedException {
+	public static void cleanSlate(EntryRepository entryRepository, QueueRepository queueRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository, UserRepository userRepository) {
 		 entryRepository.deleteById(0L);
 		 queueRepository.deleteAll();
 		 missingQueueUpdatesRepository.deleteAll();
@@ -65,19 +47,19 @@ class ZenToDoServerApplicationTests {
 		 user.setEmail(mail);
 		 user.setId(userId);
 		 user.setClock((new VectorClock().jsonify()));
-		 user.setPassword(passwordEncoder.encode("Test1234!?"));
+		 PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+		 user.setPassword(passwordEncoder.encode(password));
 		 user.setEnabled(true);
 		 userRepository.save(user);
 		Optional<User> userCreated = userRepository.findByEmail(mail);
 		if (userCreated.isEmpty())
 			throw new RuntimeException("User was not registered.");
-		ZenToDoServerApplicationTests.user = userCreated.get();
 	}
 	@Test
 	void contextLoads() {
 	}
 
-	ClientStub getStub(String userName, String email, String persistenceUnit){
+	public static ClientStub getStub(String userName, String email, String persistenceUnit){
 
 		Path path = Paths.get(userName);
 
@@ -104,7 +86,7 @@ class ZenToDoServerApplicationTests {
 		return stub;
 	}
 
-	void cleanUp(){
+	public static void cleanUp(){
 		Path dir = Paths.get("");
 
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "device*")) {
@@ -162,148 +144,4 @@ class ZenToDoServerApplicationTests {
 		Assertions.assertTrue(updates.isEmpty(),
 				"There are still missing updates.");
 	}
-
-	@Test
-	void synchronousAdd() throws Exception {
-
-		for (int n = 0; n < RUNS; n++) {
-			SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
-			application.setAdditionalProfiles("server.port", "8080");
-
-            try (ConfigurableApplicationContext context = application.run()) {
-                cleanSlate();
-                ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
-                ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
-                ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
-                List<Entry> addedEntries = new ArrayList<>();
-                addedEntries.add(stub0.addNewEntry("TASK0"));
-                addedEntries.add(stub1.addNewEntry("TASK1"));
-                addedEntries.add(stub2.addNewEntry("TASK2"));
-                Thread.sleep(SYNC_DELAY);
-
-                assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
-
-                stub0.dbHandler.close();
-                stub1.dbHandler.close();
-                stub2.dbHandler.close();
-                cleanUp();
-            }
-		}
-	}
-
-	@Test
-	void asynchronousAdd() throws Exception {
-
-		for (int n = 0; n < RUNS; n++) {
-			SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
-			application.setAdditionalProfiles("server.port", "8080");
-			try (ConfigurableApplicationContext context = application.run()) {
-				cleanSlate();
-				ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
-				ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
-				ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
-
-				List<Entry> addedEntries = new ArrayList<>();
-				addedEntries.add(stub0.addNewEntry("TASK0"));
-				context.close();
-				addedEntries.add(stub1.addNewEntry("TASK1"));
-				addedEntries.add(stub2.addNewEntry("TASK2"));
-				try (ConfigurableApplicationContext context1 = application.run()) {
-					stub0.reinit();
-					stub1.reinit();
-					stub2.reinit();
-					Thread.sleep(SYNC_DELAY);
-
-					assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
-
-					stub0.dbHandler.close();
-					stub1.dbHandler.close();
-					stub2.dbHandler.close();
-					cleanUp();
-				}
-			}
-		}
-	}
-
-	@Test
-	public void synchronousDelete() throws InterruptedException {
-		 //TODO check whether tasks are removed from queue too
-		//TODO check whether positions are resolved correctly (normal and list)
-		for (int i = 0; i < RUNS; i++){
-
-			SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
-			application.setAdditionalProfiles("server.port", "8080");
-			try (ConfigurableApplicationContext context = application.run()) {
-				cleanSlate();
-				ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
-				ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
-				ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
-
-				List<Entry> addedEntries = new ArrayList<>();
-				addedEntries.add(stub0.addNewEntry("TASK0"));
-				addedEntries.add(stub1.addNewEntry("TASK1"));
-				addedEntries.add(stub2.addNewEntry("TASK2"));
-				Thread.sleep(SYNC_DELAY);
-				Assertions.assertEquals(3, addedEntries.size());
-				stub2.removeEntry(addedEntries.getFirst().getId());
-				stub1.removeEntry(addedEntries.get(1).getId());
-				stub0.removeEntry(addedEntries.get(2).getId());
-
-				addedEntries.clear();
-				Thread.sleep(SYNC_DELAY);
-
-				assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
-
-				stub0.dbHandler.close();
-				stub1.dbHandler.close();
-				stub2.dbHandler.close();
-				cleanUp();
-			}
-		}
-	}
-
-	@Test
-	public void asynchronousDelete() throws InterruptedException {
-
-		//TODO check whether tasks are removed from queue too
-		//TODO check whether positions are resolved correctly (normal and list)
-		 for (int i = 0; i < RUNS; i++){
-
-			 SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
-			 application.setAdditionalProfiles("server.port", "8080");
-			 try (ConfigurableApplicationContext context = application.run()) {
-				 cleanSlate();
-				 ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
-				 ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
-				 ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
-
-				 List<Entry> addedEntries = new ArrayList<>();
-				 addedEntries.add(stub0.addNewEntry("TASK0"));
-				 addedEntries.add(stub1.addNewEntry("TASK1"));
-				 addedEntries.add(stub2.addNewEntry("TASK2"));
-				 context.close();
-				 Thread.sleep(SYNC_DELAY);
-				 Assertions.assertEquals(3, addedEntries.size());
-				 stub2.removeEntry(addedEntries.getFirst().getId());
-				 stub1.removeEntry(addedEntries.get(1).getId());
-				 stub0.removeEntry(addedEntries.get(2).getId());
-
-				 try (ConfigurableApplicationContext context1 = application.run()) {
-					 stub0.reinit();
-					 stub1.reinit();
-					 stub2.reinit();
-					 addedEntries.clear();
-					 Thread.sleep(SYNC_DELAY);
-
-					 assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
-
-					 stub0.dbHandler.close();
-					 stub1.dbHandler.close();
-					 stub2.dbHandler.close();
-					 cleanUp();
-				 }
-			 }
-		 }
-	}
-
 }
