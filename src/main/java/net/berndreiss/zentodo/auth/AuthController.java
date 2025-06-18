@@ -36,6 +36,8 @@ public class AuthController {
     private final UserRepository userRepository;
     private final DeviceRepository deviceRepository;
     private final EntryService entryService;
+    private final ListService listService;
+    private final ProfileService profileService;
 
     @Autowired
     private TokenManager tokenManager;

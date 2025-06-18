@@ -139,6 +139,7 @@ public class UserService {
         device.setUser(user);
         device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
         deviceRepository.save(device);
+
         return deviceId;
     }
 

@@ -60,8 +60,10 @@ public class EntryService {
          messageRepository.save(message);
          for (Entry e : entries) {
              List<Object> arguments = new ArrayList<>();
+             arguments.add(e.getProfile());
              arguments.add(e.getId());
              arguments.add(e.getTask());
+             arguments.add(e.getPosition());
              arguments.add(e.getFocus());
              arguments.add(e.getDropped());
              arguments.add(e.getList());

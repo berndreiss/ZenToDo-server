@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ListService {
+public class ProfileService {
     @Autowired
-    ListRepository listRepository;
+    ProfileRepository profileRepository;
     public void addAllToQueue(){
         //TODO IMPLEMENT
     }

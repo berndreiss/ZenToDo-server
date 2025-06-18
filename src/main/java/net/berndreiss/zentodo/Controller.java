@@ -43,13 +43,14 @@ public class Controller {
      * @param device
      * @return
      */
-    @PostMapping("queue")
+    @GetMapping("queue")
     public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
 
         // TODO SORT BY DATE
         //TODO Authorize queue poll -> add mail to message
         //TODO Filter by mail
 
+        System.out.println("QUEUE FOR " + device);
         List<ZenMessage> messageList = new ArrayList<>();
 
         Message message = null;
@@ -58,7 +59,7 @@ public class Controller {
                 .filter(u -> u.getDevices().contains(device)).toList();
 
         if (missingQueueUpdates.isEmpty())
-            return ResponseEntity.ok("");
+            return ResponseEntity.ok("{ \"message\": []}");
 
         for (MissingQueueUpdate u: missingQueueUpdates){
             if (message == null){
@@ -82,7 +83,7 @@ public class Controller {
                     }
         }
 
-
+/*
         if (message != null) {
             User user = userService.getByMail(tokenManager.getMailFromToken(auth));
 
@@ -93,7 +94,11 @@ public class Controller {
                     Collections.singletonList(device));
         }
 
-        return ResponseEntity.ok("");
+ */
+
+        String response = "{ \"message\": " + ClientStub.jsonifyList(messageList) + "}";
+        System.out.println(response);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("ackn")
@@ -153,8 +158,8 @@ public class Controller {
                                 List<Integer> missingDevices = entryService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
 
                                 if (!missingDevices.contains(device) ||
-                                        Integer.parseInt(qi.getArguments().getFirst()) != profile ||
-                                        qi.getType() != OperationType.ADD_NEW_ENTRY)
+                                        qi.getType() != OperationType.ADD_NEW_ENTRY ||
+                                        Integer.parseInt(qi.getArguments().getFirst()) != profile)
                                     continue;
 
                                 if (Integer.parseInt(qi.getArguments().get(3)) < Integer.parseInt(zm.arguments.get(3).toString()))
