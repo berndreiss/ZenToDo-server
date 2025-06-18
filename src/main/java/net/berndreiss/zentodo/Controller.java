@@ -43,7 +43,8 @@ public class Controller {
      * @param device
      * @return
      */
-    @GetMapping("queue")
+    //WE ARE USING POST MAPPING BECAUSE FOR SOME REASON ANDROID DOES NOT LIKE GET
+    @PostMapping("queue")
     public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
 
         // TODO SORT BY DATE

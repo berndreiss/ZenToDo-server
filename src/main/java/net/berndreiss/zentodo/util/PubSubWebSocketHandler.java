@@ -28,6 +28,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
         String device = deviceHeader.toString();
         Map<Integer, WebSocketSession> userSessions = sessions.computeIfAbsent(email, k -> Collections.synchronizedMap(new HashMap<>()));
         userSessions.put(Integer.parseInt(device), session);
+
         System.out.println("Client connected: " + session.getId());
     }
 
