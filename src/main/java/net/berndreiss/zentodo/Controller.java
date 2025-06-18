@@ -46,7 +46,9 @@ public class Controller {
     @PostMapping("queue")
     public synchronized ResponseEntity<String> queue(@RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device){
 
+        // TODO SORT BY DATE
         //TODO Authorize queue poll -> add mail to message
+        //TODO Filter by mail
 
         List<ZenMessage> messageList = new ArrayList<>();
 

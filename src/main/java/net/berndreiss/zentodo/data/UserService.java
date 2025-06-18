@@ -118,7 +118,7 @@ public class UserService {
      * TODO
      * @param user
      */
-    public void addNewDevice(User user){
+    public int addNewDevice(User user){
         List<Device> deviceList = deviceRepository.findAll().stream()
                 .filter(device -> Objects.equals(device.getUser().getId(), user.getId()))
                 .sorted(Comparator.comparingInt(d -> (int) d.getId()))
@@ -139,6 +139,7 @@ public class UserService {
         device.setUser(user);
         device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
         deviceRepository.save(device);
+        return deviceId;
     }
 
     /**

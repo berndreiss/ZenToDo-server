@@ -35,6 +35,7 @@ public class AuthController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final DeviceRepository deviceRepository;
+    private final EntryService entryService;
 
     @Autowired
     private TokenManager tokenManager;
@@ -50,7 +51,9 @@ public class AuthController {
 
         User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
         if (user != null){
-            userService.addNewDevice(user);
+            int newDevice = userService.addNewDevice(user);
+            entryService.addAllToQueue(user, newDevice);
+
             if (!user.isEnabled())
                 return ResponseEntity.ok("exists," + user.getId() + "," + user.getDevice());
 
@@ -161,5 +164,9 @@ public class AuthController {
             throw new Exception("User not retrieved.");
         return ResponseEntity.ok(status + "," + tokenManager.generateJwtToken(new UserWrapper(user)));
 
+    }
+    @GetMapping ("test")
+    public ResponseEntity<String> test() {
+        return  ResponseEntity.ok("okay");
     }
 }
