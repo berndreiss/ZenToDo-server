@@ -50,8 +50,6 @@ public class Controller {
         // TODO SORT BY DATE
         //TODO Authorize queue poll -> add mail to message
         //TODO Filter by mail
-
-        System.out.println("QUEUE FOR " + device);
         List<ZenMessage> messageList = new ArrayList<>();
 
         Message message = null;
@@ -98,7 +96,6 @@ public class Controller {
  */
 
         String response = "{ \"message\": " + ClientStub.jsonifyList(messageList) + "}";
-        System.out.println(response);
         return ResponseEntity.ok(response);
     }
 
@@ -117,8 +114,6 @@ public class Controller {
     @PostMapping("process")
     public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device) throws InterruptedException {
 
-        System.out.println("PROCESSING:");
-        System.out.println(messageListString);
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
 
             List<ZenServerMessage> messageList = new ArrayList<>();

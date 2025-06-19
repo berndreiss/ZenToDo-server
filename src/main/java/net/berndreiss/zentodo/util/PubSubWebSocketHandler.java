@@ -1,11 +1,9 @@
 package net.berndreiss.zentodo.util;
 
-import net.berndreiss.zentodo.data.Acknowledgement;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
 import java.util.*;
 
 @Component
