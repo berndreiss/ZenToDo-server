@@ -53,15 +53,16 @@ public class AuthController {
 
         User user = userRepository.findByEmail(requestModel.getEmail()).orElse(null);
         if (user != null){
-            int newDevice = userService.addNewDevice(user);
-            entryService.addAllToQueue(user, newDevice);
 
             if (!user.isEnabled())
                 return ResponseEntity.ok("exists," + user.getId() + "," + user.getDevice());
 
+            int newDevice = userService.addNewDevice(user);
+            entryService.addAllToQueue(user, newDevice);
+
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
             final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user));
-            return ResponseEntity.ok("1," + user.getId() + "," + user.getDevice() + "," + jwtToken);
+            return ResponseEntity.ok("logged_in," + user.getId() + "," + newDevice + "," + jwtToken);
         }
 
         String response = userService.registerUser(requestModel.getEmail(), requestModel.getPassword());

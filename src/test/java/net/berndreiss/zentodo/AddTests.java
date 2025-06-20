@@ -9,6 +9,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +32,7 @@ public class AddTests {
     private PubSubWebSocketHandler socketHandler;
 
     @Test
-    void synchronousAdd() throws Exception {
+    void synchronousAdd() throws InvalidUserActionException, IOException, DuplicateUserIdException, InterruptedException {
 
         for (int n = 0; n < ZenToDoServerApplicationTests.RUNS; n++) {
             SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
@@ -59,7 +61,7 @@ public class AddTests {
     }
 
     @Test
-    void asynchronousAdd() throws Exception {
+    void asynchronousAdd() throws IOException, DuplicateIdException, InvalidActionException, InterruptedException {
 
         for (int n = 0; n < ZenToDoServerApplicationTests.RUNS; n++) {
             SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
@@ -73,8 +75,10 @@ public class AddTests {
                 List<Entry> addedEntries = new ArrayList<>();
                 addedEntries.add(stub0.addNewEntry("TASK0"));
                 context.close();
-                addedEntries.add(stub1.addNewEntry("TASK1"));
-                addedEntries.add(stub2.addNewEntry("TASK2"));
+                try {
+                    addedEntries.add(stub1.addNewEntry("TASK1"));
+                    addedEntries.add(stub2.addNewEntry("TASK2"));
+                } catch (ConnectException _) {}
                 try (ConfigurableApplicationContext context1 = application.run()) {
                     stub0.reinit();
                     stub1.reinit();

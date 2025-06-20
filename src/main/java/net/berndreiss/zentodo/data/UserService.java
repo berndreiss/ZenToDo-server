@@ -49,10 +49,8 @@ public class UserService {
 
         User user = repository.findByEmail(email).orElse(null);
 
-
         List<Device> deviceList = null;
         if (user != null) {
-            addNewDevice(user);
             final long userId = user.getId();
             deviceList = deviceRepository.findAll().stream()
                     .filter(device -> device.getUser().getId() == userId)
@@ -66,7 +64,7 @@ public class UserService {
         if (user != null){
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
             final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user));
-            return "1," + user.getId() + "," + deviceId + "," + jwtToken;
+            return "logged_in," + user.getId() + "," + deviceId + "," + jwtToken;
         }
 
 
@@ -86,9 +84,6 @@ public class UserService {
         user.setDevice(deviceId);
         user.setClock(clock.jsonify());
         repository.save(user);
-
-        addNewDevice(user);
-
 
         // Remove token after 10 minutes
         Thread thread = new Thread(() -> {
@@ -111,7 +106,7 @@ public class UserService {
         // Send verification email
         emailService.sendVerificationEmail(email, token);
 
-        return "0," + user.getId() + "," + deviceId;
+        return "registered," + user.getId();
     }
 
     /**
@@ -124,23 +119,25 @@ public class UserService {
                 .sorted(Comparator.comparingInt(d -> (int) d.getId()))
                 .toList();
 
-        int deviceId = 0;
+        int id = 0;
         if (!deviceList.isEmpty())
-            deviceId = deviceList.getLast().getId() + 1;
+            id = deviceList.getLast().getId() + 1;
 
-        user.setDevice(deviceId);
+        user.setDevice(id);
 
         VectorClock clock = new VectorClock(user.getClock());
-        clock.addDevice(deviceId);
+        clock.addDevice(id);
         user.setClock(clock.jsonify());
         repository.save(user);
         Device device = new Device();
-        device.setId(deviceId);
-        device.setUser(user);
+        DeviceId deviceId = new DeviceId();
+        deviceId.setId(id);
+        deviceId.setUser(user);
+        device.setDeviceId(deviceId);
         device.setExpiration(Instant.now().plus(21, ChronoUnit.DAYS));
         deviceRepository.save(device);
 
-        return deviceId;
+        return id;
     }
 
     /**

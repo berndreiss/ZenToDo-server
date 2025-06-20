@@ -10,6 +10,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,6 +65,8 @@ public class DeleteTests {
                 stub1.dbHandler.close();
                 stub2.dbHandler.close();
                 cleanUp();
+            } catch (IOException | InvalidUserActionException | DuplicateUserIdException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -107,6 +111,8 @@ public class DeleteTests {
                     stub2.dbHandler.close();
                     cleanUp();
                 }
+            } catch (IOException | DuplicateIdException | InvalidActionException e) {
+                throw new RuntimeException(e);
             }
         }
     }

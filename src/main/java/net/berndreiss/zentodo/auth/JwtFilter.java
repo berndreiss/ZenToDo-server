@@ -82,7 +82,8 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (device != null){
             if (user != null){
-                user.setDevice(Integer.parseInt(device));
+                Integer deviceAsInt = Integer.parseInt(device);
+                user.setDevice(deviceAsInt);
                 userRepository.save(user);
             }
         }

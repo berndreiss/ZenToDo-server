@@ -22,11 +22,13 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
         if (deviceHeader == null)
             throw new RuntimeException("Missing device header");
 
+        final Map<String, Map<Integer, WebSocketSession>> sessionsTEMP = sessions;
         String email = emailHeader.toString();
         String device = deviceHeader.toString();
         Map<Integer, WebSocketSession> userSessions = sessions.computeIfAbsent(email, k -> Collections.synchronizedMap(new HashMap<>()));
         userSessions.put(Integer.parseInt(device), session);
 
+        sessionsTEMP.put(email, userSessions);
         System.out.println("Client connected: " + session.getId());
     }
 
