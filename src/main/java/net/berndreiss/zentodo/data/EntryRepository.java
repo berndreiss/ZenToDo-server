@@ -1,9 +1,9 @@
 package net.berndreiss.zentodo.data;
 
+import net.berndreiss.zentodo.data.Entry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
-import java.util.Optional;
 
 /**
  * TODO DESCRIBE

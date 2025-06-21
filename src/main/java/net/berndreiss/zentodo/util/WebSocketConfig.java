@@ -1,7 +1,6 @@
 package net.berndreiss.zentodo.util;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.util.PubSubWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;

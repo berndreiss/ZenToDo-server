@@ -1,11 +1,11 @@
 package net.berndreiss.zentodo.util;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.OperationType;
-import net.berndreiss.zentodo.data.Entry;
-import net.berndreiss.zentodo.data.EntryService;
 import net.berndreiss.zentodo.data.QueueItem;
 import net.berndreiss.zentodo.data.User;
+import net.berndreiss.zentodo.data.Entry;
+import net.berndreiss.zentodo.operations.OperationType;
+import net.berndreiss.zentodo.data.EntryService;
 import org.springframework.stereotype.Component;
 
 import java.util.*;

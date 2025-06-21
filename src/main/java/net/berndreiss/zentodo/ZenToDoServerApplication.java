@@ -1,12 +1,8 @@
 package net.berndreiss.zentodo;
 
-import lombok.extern.java.Log;
-import net.berndreiss.zentodo.data.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.web.servlet.ServletComponentScan;
 
 import java.util.logging.Logger;
 
@@ -14,7 +10,7 @@ import java.util.logging.Logger;
  * TODO DESCRIBE
  */
 @SpringBootApplication (scanBasePackages = "net.berndreiss.zentodo")
-@EntityScan(basePackages = {"net.berndreiss.zentodo.data"}) // Adjust the package accordingly
+@EntityScan(basePackages = {"net.berndreiss.zentodo.data"})
 public class ZenToDoServerApplication {
 
 	public static final Logger logger = Logger.getLogger(ZenToDoServerApplication.class.getName());

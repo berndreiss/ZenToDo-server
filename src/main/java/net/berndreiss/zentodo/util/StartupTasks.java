@@ -2,15 +2,12 @@ package net.berndreiss.zentodo.util;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.data.DeviceRepository;
 import net.berndreiss.zentodo.data.User;
 import net.berndreiss.zentodo.data.UserRepository;
-import net.berndreiss.zentodo.data.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Random;
 
 @Component
 @RequiredArgsConstructor

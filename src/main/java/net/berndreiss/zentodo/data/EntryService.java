@@ -1,7 +1,7 @@
 package net.berndreiss.zentodo.data;
 
 import lombok.RequiredArgsConstructor;
-import net.berndreiss.zentodo.OperationType;
+import net.berndreiss.zentodo.operations.OperationType;
 import net.berndreiss.zentodo.util.VectorClock;
 import net.berndreiss.zentodo.util.ZenServerMessage;
 import org.springframework.stereotype.Service;

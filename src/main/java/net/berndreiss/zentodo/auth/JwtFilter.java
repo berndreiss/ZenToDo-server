@@ -1,7 +1,6 @@
 package net.berndreiss.zentodo.auth;
 
 import java.io.IOException;
-import java.util.Optional;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
