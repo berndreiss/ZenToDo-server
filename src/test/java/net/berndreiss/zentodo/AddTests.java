@@ -23,7 +23,7 @@ public class AddTests {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private EntryRepository entryRepository;
+    private TaskRepository taskRepository;
     @Autowired
     private QueueRepository queueRepository;
     @Autowired
@@ -39,7 +39,7 @@ public class AddTests {
             application.setAdditionalProfiles("server.port", "8080");
 
             try (ConfigurableApplicationContext context = application.run()) {
-                cleanSlate(entryRepository, queueRepository, missingQueueUpdatesRepository, userRepository);
+                cleanSlate(taskRepository, queueRepository, missingQueueUpdatesRepository, userRepository);
                 ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
                 ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
                 ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
@@ -49,7 +49,7 @@ public class AddTests {
                 addedEntries.add(stub2.addNewEntry("TASK2"));
                 Thread.sleep(ZenToDoServerApplicationTests.SYNC_DELAY);
 
-                assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
+                assertEntries(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
 
                 stub0.dbHandler.close();
                 stub1.dbHandler.close();
@@ -67,7 +67,7 @@ public class AddTests {
             SpringApplication application = new SpringApplication(ZenToDoServerApplication.class);
             application.setAdditionalProfiles("server.port", "8080");
             try (ConfigurableApplicationContext context = application.run()) {
-                cleanSlate(entryRepository, queueRepository, missingQueueUpdatesRepository, userRepository);
+                cleanSlate(taskRepository, queueRepository, missingQueueUpdatesRepository, userRepository);
                 ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
                 ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
                 ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
@@ -85,7 +85,7 @@ public class AddTests {
                     stub2.reinit();
                     Thread.sleep(SYNC_DELAY);
 
-                    assertEntries(List.of(stub0, stub1, stub2), addedEntries, entryRepository, missingQueueUpdatesRepository);
+                    assertEntries(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
 
                     stub0.dbHandler.close();
                     stub1.dbHandler.close();

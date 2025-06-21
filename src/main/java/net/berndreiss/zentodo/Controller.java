@@ -20,7 +20,7 @@ import java.util.*;
 public class Controller {
 
     private final UserService userService;
-    private final EntryService entryService;
+    private final TaskService taskService;
     private final AcknowledgementService acknowledgementService;
     private final MessageRepository messageRepository;
     private final EventPublisherController eventPublisherController;
@@ -57,7 +57,7 @@ public class Controller {
 
         Message message = null;
 
-        List<MissingQueueUpdate> missingQueueUpdates = entryService.missingQueueUpdatesRepository.findAll().stream()
+        List<MissingQueueUpdate> missingQueueUpdates = taskService.missingQueueUpdatesRepository.findAll().stream()
                 .filter(u -> u.getDevices().contains(device)).toList();
 
         if (missingQueueUpdates.isEmpty())
@@ -68,7 +68,7 @@ public class Controller {
                 message = new Message();
                 messageRepository.save(message);
             }
-            QueueItem queueItem = entryService.queueRepository.findById(u.getId()).orElse(null);
+            QueueItem queueItem = taskService.queueRepository.findById(u.getId()).orElse(null);
             if (queueItem != null) {
 
                 List<Object> args = new ArrayList<>(queueItem.getArguments());
@@ -80,12 +80,12 @@ public class Controller {
                 acknowledgement.setMissingQueueUpdateId(u.getId());
                 acknowledgement.setMessage(message);
 
-                entryService.acknowledgementRepository.save(acknowledgement);
+                taskService.acknowledgementRepository.save(acknowledgement);
 
             }
         }
 
-        String response = "{ \"message\": " + ClientStub.jsonifyList(messageList) + "}";
+        String response = "{ \"message\": " + ZenMessage.jsonifyList(messageList) + "}";
         return ResponseEntity.ok(response);
     }
 
@@ -157,11 +157,11 @@ public class Controller {
                 }
             }
             //add the message to the queue for all other devices
-            entryService.addToQueue(zm, user, devices, message);
+            taskService.addToQueue(zm, user, devices, message);
         }
 
         //publish the message list to all other devices
-        eventPublisherController.publish(String.valueOf(message.getId()), ClientStub.jsonifyServerList(messageList), user.getEmail(), devices);
+        eventPublisherController.publish(String.valueOf(message.getId()), ZenServerMessage.jsonifyServerList(messageList), user.getEmail(), devices);
         return ResponseEntity.ok("");
     }
 }

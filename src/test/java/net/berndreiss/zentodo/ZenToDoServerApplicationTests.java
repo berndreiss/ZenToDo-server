@@ -14,7 +14,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.IOException;
-import java.lang.ref.Cleaner;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,11 +32,11 @@ class ZenToDoServerApplicationTests {
 	public static final int RUNS = 1;
 
 
-	public static void cleanSlate(EntryRepository entryRepository, QueueRepository queueRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository, UserRepository userRepository) {
-		 entryRepository.deleteById(0L);
+	public static void cleanSlate(TaskRepository taskRepository, QueueRepository queueRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository, UserRepository userRepository) {
+		 taskRepository.deleteById(0L);
 		 queueRepository.deleteAll();
 		 missingQueueUpdatesRepository.deleteAll();
-		 entryRepository.deleteAll();
+		 taskRepository.deleteAll();
 		 userRepository.deleteAll();
 
 		 Random random = new Random();
@@ -106,11 +105,11 @@ class ZenToDoServerApplicationTests {
 		}
 	}
 
-	public static void assertEntries(List<ClientStub> stubs, List<Entry> addedEntries, EntryRepository entryRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository){
+	public static void assertEntries(List<ClientStub> stubs, List<Entry> addedEntries, TaskRepository taskRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository){
 		 List<List<Entry>> entries = new ArrayList<>();
 		 for (ClientStub stub: stubs)
 			 entries.add(stub.loadEntries());
-		 entries.add(entryRepository.findAll());
+		 entries.add(taskRepository.findAll());
 		 Assertions.assertEquals(addedEntries.size(), entries.getFirst().size(),
 				 "First stub does not have right amount of entries.");
 		 for (int i = 0; i < entries.size()-1; i++){

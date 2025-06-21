@@ -28,7 +28,7 @@ public class AuthController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final DeviceRepository deviceRepository;
-    private final EntryService entryService;
+    private final TaskService taskService;
     private final ListService listService;
     private final ProfileService profileService;
 
@@ -51,7 +51,7 @@ public class AuthController {
                 return ResponseEntity.ok("exists," + user.getId() + "," + user.getDevice());
 
             int newDevice = userService.addNewDevice(user);
-            entryService.addAllToQueue(user, newDevice);
+            taskService.addAllToQueue(user, newDevice);
 
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestModel.getEmail(), requestModel.getPassword()));
             final String jwtToken = tokenManager.generateJwtToken(new UserWrapper(user));

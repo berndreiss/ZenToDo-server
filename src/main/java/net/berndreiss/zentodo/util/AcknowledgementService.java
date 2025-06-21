@@ -2,7 +2,7 @@ package net.berndreiss.zentodo.util;
 
 import lombok.RequiredArgsConstructor;
 import net.berndreiss.zentodo.data.Acknowledgement;
-import net.berndreiss.zentodo.data.EntryService;
+import net.berndreiss.zentodo.data.TaskService;
 import net.berndreiss.zentodo.data.MessageRepository;
 import net.berndreiss.zentodo.data.MissingQueueUpdate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ import java.util.Objects;
 public class AcknowledgementService {
 
     @Autowired
-    private final EntryService entryService;
+    private final TaskService taskService;
     @Autowired
     private final MessageRepository messageRepository;
 
@@ -29,11 +29,11 @@ public class AcknowledgementService {
             throw new RuntimeException(e);
         }
 
-        List<Acknowledgement> acknowledgements = entryService.acknowledgementRepository.findAll().stream().filter(a -> a.getMessage().getId() == id).toList();
+        List<Acknowledgement> acknowledgements = taskService.acknowledgementRepository.findAll().stream().filter(a -> a.getMessage().getId() == id).toList();
 
 
         acknowledgements.forEach(a -> {
-            MissingQueueUpdate missingQueueUpdate = entryService.missingQueueUpdatesRepository.findById(a.getMissingQueueUpdateId());
+            MissingQueueUpdate missingQueueUpdate = taskService.missingQueueUpdatesRepository.findById(a.getMissingQueueUpdateId());
             if (missingQueueUpdate != null) {
                 for (int i = 0; i < missingQueueUpdate.getDevices().size(); i++) {
                     if (Objects.equals(missingQueueUpdate.getDevices().get(i), device)) {
@@ -42,12 +42,12 @@ public class AcknowledgementService {
                     }
                 }
                 if (missingQueueUpdate.getDevices().isEmpty()) {
-                    entryService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
-                    entryService.queueRepository.deleteById(missingQueueUpdate.getId());
+                    taskService.missingQueueUpdatesRepository.delete(missingQueueUpdate);
+                    taskService.queueRepository.deleteById(missingQueueUpdate.getId());
                     messageRepository.deleteById(id);
-                    entryService.acknowledgementRepository.delete(a);
+                    taskService.acknowledgementRepository.delete(a);
                 } else
-                    entryService.missingQueueUpdatesRepository.save(missingQueueUpdate);
+                    taskService.missingQueueUpdatesRepository.save(missingQueueUpdate);
             }
         });
     }

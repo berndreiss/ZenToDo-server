@@ -16,19 +16,19 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class EntryService {
-    public final EntryRepository entryRepository;
+public class TaskService {
+    public final TaskRepository taskRepository;
     public final QueueRepository queueRepository;
     public final MissingQueueUpdatesRepository missingQueueUpdatesRepository;
     public final AcknowledgementRepository acknowledgementRepository;
     public final MessageRepository messageRepository;
 
-    public List<Entry> getAllEntries(long userId){
-        return entryRepository.findAllByUserId(userId);
+    public List<Task> getAllTasks(long userId){
+        return taskRepository.findAllByUserId(userId);
     }
 
-    public void addEntry(Entry entry){
-        entryRepository.save(entry);
+    public void addTask(Task task){
+        taskRepository.save(task);
     }
 
     public void addToQueue(ZenServerMessage zenMessage, User user, List<Integer> devices, Message message) throws InterruptedException {
@@ -54,21 +54,21 @@ public class EntryService {
      public void addAllToQueue(User user, int device) throws InterruptedException {
          if (user == null)
              return;
-         List<Entry> entries = entryRepository.findAllByUserId(user.getId());
+         List<Task> entries = taskRepository.findAllByUserId(user.getId());
          Message message = new Message();
          messageRepository.save(message);
-         for (Entry e : entries) {
+         for (Task t : entries) {
              List<Object> arguments = new ArrayList<>();
-             arguments.add(e.getProfile());
-             arguments.add(e.getId());
-             arguments.add(e.getTask());
-             arguments.add(e.getPosition());
-             arguments.add(e.getFocus());
-             arguments.add(e.getDropped());
-             arguments.add(e.getList());
-             arguments.add(e.getListPosition());
-             arguments.add(e.getReminderDate());
-             arguments.add(e.getRecurrence());
+             arguments.add(t.getProfile());
+             arguments.add(t.getId());
+             arguments.add(t.getTask());
+             arguments.add(t.getPosition());
+             arguments.add(t.getFocus());
+             arguments.add(t.getDropped());
+             arguments.add(t.getList());
+             arguments.add(t.getListPosition());
+             arguments.add(t.getReminderDate());
+             arguments.add(t.getRecurrence());
              Instant instant = ZonedDateTime.now().minusYears(100).toInstant();
              ZenServerMessage zm = new ZenServerMessage(OperationType.POST, arguments, new VectorClock(user), instant);
              addToQueue(zm, user, List.of(device), message);
