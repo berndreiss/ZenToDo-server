@@ -107,6 +107,7 @@ public class Controller {
     @PostMapping("process_operation")
     public synchronized ResponseEntity<String> process(@RequestBody String messageListString, @RequestHeader("Authorization") String auth, @RequestHeader("device") Integer device) throws InterruptedException {
 
+        //TODO check whether there are items in the queue and send them first
         User user = userService.getByMail(tokenManager.getMailFromToken(auth));
 
         if (user == null)
