@@ -140,7 +140,7 @@ public class Controller {
             userService.repository.save(user);
 
             switch (zm.type) {
-                case ADD_NEW_ENTRY -> messageProcessor.addNewEntry(zm, user, device, alreadyAddedPositions);
+                case ADD_NEW_TASK -> messageProcessor.addNewEntry(zm, user, device, alreadyAddedPositions);
                 case DELETE -> messageProcessor.delete(zm, user, device);
                 case SWAP -> messageProcessor.swap(zm, user, device);
                 case SWAP_LIST -> messageProcessor.swapList(zm, user, device);
