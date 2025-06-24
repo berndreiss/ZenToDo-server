@@ -25,7 +25,7 @@ public class MessageProcessor {
             List<Integer> missingDevices = taskService.missingQueueUpdatesRepository.findById(qi.getId()).getDevices();
 
             if (!missingDevices.contains(device) ||
-                    qi.getType() != OperationType.ADD_NEW_ENTRY ||
+                    qi.getType() != OperationType.ADD_NEW_TASK ||
                     Integer.parseInt(qi.getArguments().getFirst()) != profile)
                 continue;
 
@@ -93,7 +93,7 @@ public class MessageProcessor {
                 continue;
 
             switch (qi.getType()) {
-                case OperationType.ADD_NEW_ENTRY:
+                case OperationType.ADD_NEW_TASK:
                     //TODO IMPLEMENT
                     if (Integer.parseInt(qi.getArguments().get(3)) > task.get().getPosition()) {
                         taskService.queueRepository.saveAndFlush(qi);

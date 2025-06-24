@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .filter(User::isEnabled) // Ensure email is verified
                 .map(user -> org.springframework.security.core.userdetails.User
                         .withUsername(user.getEmail())
-                        .password(user.getPassword())
+                        .password(user.getPasswordHash())
                         .build())
                 .orElseThrow(() -> new RuntimeException("User not found or email not verified"));
     }

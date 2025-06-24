@@ -68,6 +68,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
                         value.sendMessage(new TextMessage("{\"message\": " + message + ", \"id\": \"" + id + "\"}"));
                         notSent.remove(key);
                     } catch (Exception e) {
+                        throw new RuntimeException(e);
                         //TODO LOG
                     }
                 }

@@ -75,12 +75,12 @@ public class UserService {
             userId++;
 
         VectorClock clock = new VectorClock();
-        clock.entries.put(deviceId, 0L);
+        clock.vectorMap.put(deviceId, 0L);
 
         user = new User();
         user.setId(userId);
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setDevice(deviceId);
         user.setClock(clock.jsonify());
         repository.save(user);
