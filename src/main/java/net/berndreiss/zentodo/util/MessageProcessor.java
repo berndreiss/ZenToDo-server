@@ -148,4 +148,7 @@ public class MessageProcessor {
 
     public void updateUserName(ZenServerMessage zm, User user, Integer device) {
     }
+
+    public void addNewList(ZenServerMessage zm) {
+    }
 }
