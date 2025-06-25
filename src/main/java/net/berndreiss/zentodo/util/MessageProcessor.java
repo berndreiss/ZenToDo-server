@@ -151,4 +151,7 @@ public class MessageProcessor {
 
     public void addNewList(ZenServerMessage zm) {
     }
+
+    public void addUserProfileToList(ZenServerMessage zm) {
+    }
 }

@@ -142,6 +142,7 @@ public class Controller {
             switch (zm.type) {
                 case ADD_NEW_TASK -> messageProcessor.addNewEntry(zm, user, device, alreadyAddedPositions);
                 case ADD_NEW_LIST -> messageProcessor.addNewList(zm);
+                case ADD_USER_PROFILE_TO_LIST -> messageProcessor.addUserProfileToList(zm);
                 case DELETE -> messageProcessor.delete(zm, user, device);
                 case SWAP -> messageProcessor.swap(zm, user, device);
                 case SWAP_LIST -> messageProcessor.swapList(zm, user, device);

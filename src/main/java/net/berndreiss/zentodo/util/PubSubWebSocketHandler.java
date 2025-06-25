@@ -60,6 +60,7 @@ public class PubSubWebSocketHandler extends TextWebSocketHandler {
             List<Integer> notSent = new ArrayList<>(devices);
             Map<Integer, WebSocketSession> socketSessions = sessions.get(email);
 
+            System.out.println(message);
             if (socketSessions == null)
                 return notSent;
             sessions.get(email).forEach( (key, value) ->{
