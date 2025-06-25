@@ -41,13 +41,13 @@ public class ReceiveExistingTests {
                 ClientStub stub0 = getStub("device0", mail, "ZenToDoPU");
                 ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
                 ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
-                List<Entry> addedEntries = new ArrayList<>();
+                List<Task> addedEntries = new ArrayList<>();
                 //addedEntries.add(stub0.addNewEntry("TASK0"));
                 //addedEntries.add(stub1.addNewEntry("TASK1"));
                 //addedEntries.add(stub2.addNewEntry("TASK2"));
                 //Thread.sleep(ZenToDoServerApplicationTests.SYNC_DELAY);
 
-                assertEntries(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
+                asserTasks(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
 
                 stub0.dbHandler.close();
                 stub1.dbHandler.close();
@@ -70,7 +70,7 @@ public class ReceiveExistingTests {
                 ClientStub stub1 = getStub("device1", mail, "ZenToDoPU1");
                 ClientStub stub2 = getStub("device2", mail, "ZenToDoPU2");
 
-                List<Entry> addedEntries = new ArrayList<>();
+                List<Task> addedEntries = new ArrayList<>();
                 //addedEntries.add(stub0.addNewEntry("TASK0"));
                 context.close();
                 //addedEntries.add(stub1.addNewEntry("TASK1"));
@@ -81,7 +81,7 @@ public class ReceiveExistingTests {
                     stub2.reinit();
                     Thread.sleep(SYNC_DELAY);
 
-                    assertEntries(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
+                    asserTasks(List.of(stub0, stub1, stub2), addedEntries, taskRepository, missingQueueUpdatesRepository);
 
                     stub0.dbHandler.close();
                     stub1.dbHandler.close();

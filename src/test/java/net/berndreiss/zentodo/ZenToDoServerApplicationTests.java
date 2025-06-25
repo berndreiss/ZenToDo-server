@@ -3,7 +3,8 @@ package net.berndreiss.zentodo;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import net.berndreiss.zentodo.data.*;
-import net.berndreiss.zentodo.data.Entry;
+import net.berndreiss.zentodo.exceptions.DuplicateUserIdException;
+import net.berndreiss.zentodo.exceptions.InvalidUserActionException;
 import net.berndreiss.zentodo.persistence.DbHandler;
 import net.berndreiss.zentodo.util.VectorClock;
 import org.junit.jupiter.api.Assertions;
@@ -48,7 +49,7 @@ class ZenToDoServerApplicationTests {
 		 user.setId(userId);
 		 user.setClock((new VectorClock().jsonify()));
 		 PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-		 user.setPassword(passwordEncoder.encode(password));
+		 user.setPasswordHash(passwordEncoder.encode(password));
 		 user.setEnabled(true);
 		 userRepository.save(user);
 		Optional<User> userCreated = userRepository.findByEmail(mail);
@@ -72,15 +73,15 @@ class ZenToDoServerApplicationTests {
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnit);
 		Database opHandler = new DbHandler(emf, userName);
 		ClientStub stub = new  ClientStub(opHandler);
-		ClientStub.SERVER = "localhost:8080/api/";
-		ClientStub.PROTOCOL = "http://";
-		ClientStub.WEBSOCKET_PROTOCOL = "ws://";
-		stub.init(email, userName, () -> password);
+		ClientStub.SERVER = "localhost:8080/api";
+		ClientStub.PROTOCOL = "http";
+		ClientStub.WEBSOCKET_PROTOCOL = "ws";
 		stub.setMessagePrinter(System.out::println);
-		List<Entry> entries = stub.loadEntries();
+		stub.init(email, userName, () -> password);
+		List<Task> tasks = stub.loadTasks();
 
-		for (Entry e: entries)
-			stub.removeEntry(e.getId());
+		for (Task t: tasks)
+			stub.removeTask(t.getId());
 		stub.clearQueue();
 		return stub;
 	}
@@ -89,15 +90,15 @@ class ZenToDoServerApplicationTests {
 		Path dir = Paths.get("");
 
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "device*")) {
-			for (Path entry : stream) {
-				System.out.println(entry);
-				if (Files.isDirectory(entry)) {
-					try (DirectoryStream<Path> subStream = Files.newDirectoryStream(entry)) {
+			for (Path task : stream) {
+				System.out.println(task);
+				if (Files.isDirectory(task)) {
+					try (DirectoryStream<Path> subStream = Files.newDirectoryStream(task)) {
 						for (Path e : subStream)
 							Files.delete(e);
 					}
-					Files.delete(entry);
-					System.out.println("Deleted: " + entry);
+					Files.delete(task);
+					System.out.println("Deleted: " + task);
 				}
 			}
 		} catch (IOException e) {
@@ -105,32 +106,32 @@ class ZenToDoServerApplicationTests {
 		}
 	}
 
-	public static void assertEntries(List<ClientStub> stubs, List<Entry> addedEntries, TaskRepository taskRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository){
-		 List<List<Entry>> entries = new ArrayList<>();
+	public static void asserTasks(List<ClientStub> stubs, List<Task> addedTasks, TaskRepository taskRepository, MissingQueueUpdatesRepository missingQueueUpdatesRepository){
+		 List<List<Task>> tasks = new ArrayList<>();
 		 for (ClientStub stub: stubs)
-			 entries.add(stub.loadEntries());
-		 entries.add(taskRepository.findAll());
-		 Assertions.assertEquals(addedEntries.size(), entries.getFirst().size(),
-				 "First stub does not have right amount of entries.");
-		 for (int i = 0; i < entries.size()-1; i++){
-			 if (i < entries.size() - 2)
-			     Assertions.assertEquals(entries.get(i).size(), entries.get(i+1).size(),
-						 "Stubs don't have the same amount of entries.");
+			 tasks.add(stub.loadTasks());
+		 tasks.add(taskRepository.findAll());
+		 Assertions.assertEquals(addedTasks.size(), tasks.getFirst().size(),
+				 "First stub does not have right amount of tasks.");
+		 for (int i = 0; i < tasks.size()-1; i++){
+			 if (i < tasks.size() - 2)
+			     Assertions.assertEquals(tasks.get(i).size(), tasks.get(i+1).size(),
+						 "Stubs don't have the same amount of tasks.");
 			 else
-				 Assertions.assertEquals(entries.get(i).size(), entries.get(i+1).size(),
-						 "Server doesn't have the same amount of entries as stubs.");
+				 Assertions.assertEquals(tasks.get(i).size(), tasks.get(i+1).size(),
+						 "Server doesn't have the same amount of tasks as stubs.");
 		 }
-		 for (int i = 0; i <entries.getFirst().size(); i++){
-			 for (int j = 0; j < entries.size() - 1; j++) {
-				 if (j < entries.size() - 2) {
-					 Assertions.assertEquals(entries.get(j).get(i).getTask(), entries.get(j + 1).get(i).getTask(),
+		 for (int i = 0; i <tasks.getFirst().size(); i++){
+			 for (int j = 0; j < tasks.size() - 1; j++) {
+				 if (j < tasks.size() - 2) {
+					 Assertions.assertEquals(tasks.get(j).get(i).getTask(), tasks.get(j + 1).get(i).getTask(),
 							 "Entry " + i  + " does not match all stubs.");
-					 Assertions.assertEquals(entries.get(j).get(i).getId(), entries.get(j + 1).get(i).getId(),
+					 Assertions.assertEquals(tasks.get(j).get(i).getId(), tasks.get(j + 1).get(i).getId(),
 							 "Entry " + i  + " does not match all stubs.");
 				 } else{
-					 Assertions.assertEquals(entries.get(j).get(i).getTask(), entries.get(j + 1).get(i).getTask(),
+					 Assertions.assertEquals(tasks.get(j).get(i).getTask(), tasks.get(j + 1).get(i).getTask(),
 							 "Entry " + i  + " does not match on server.");
-					 Assertions.assertEquals(entries.get(j).get(i).getId(), entries.get(j + 1).get(i).getId(),
+					 Assertions.assertEquals(tasks.get(j).get(i).getId(), tasks.get(j + 1).get(i).getId(),
 							 "Entry " + i  + " does not match on server.");
 
 				 }
